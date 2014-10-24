@@ -4,10 +4,14 @@
   
   - PID controlled rpm
   - controlled via i2c
-  - connects to a rotary encoder + switch for speed/manual stop
+  - connects to a rotary encoder/switch for speed/manual stop
   - outputs a servo signal (1-2ms, 50Hz) for esc control
   - some spare pins
-  - displays on a PowerTip PG12864 LCD
+  - displays on a 160x128 SPI TFT with ST7735S controller
+  - shows spindle on/off via TX led
+  - shows coolant on/off via RX led
+  - blinks L led as heartbeat/PID visualisation
+  - uses IDLE sleep mode
 */
 
 #include <inttypes.h>
@@ -89,11 +93,6 @@
 #define PWM_SLOW 50
 #define PWM_MAX 2000
 
-#define RPM_OFF 0
-#define RPM_MAX 20000  //8520
-
-#define RPM_PWM_SCALE ( RPM_MAX / PWM_MAX)
-
 #define BLINK_TICKS_MANUAL 5
 #define BLINK_TICKS_MASTER 1
 
@@ -131,13 +130,24 @@
 #define COOLANT_FLOOD 2
 #define COOLANT_BOTH  3
 
-#define RPM_MAXPM     30000
-#define RPM_MAXHZ     (RPM_MAXPM / 60)  // 500
+#define RPM_OFF 0
+#define RPM_MAX     30000
+#define RPM_PWM_SCALE ((RPM_MAX - RPM_OFF) / 120)
 
+#define RPM_MAXHZ     (RPM_MAX / 60)  // 500
 #define RPM_PPR       8  // pulses per rotation
-#define RPM_BUFFER    12  // averaging buffer depth 
+
+// calculate gate frequency
+// RPM_MAXHZ * RPM_PPR = 500 * 8 = 4000 pulses per second
+// make it fit in 8bit: 4000 / 256 = 15.625
+// choose 16 
+
 #define RPM_HZ        16  // gate frequency in Hz
-#define RPM_SCALE     ((RPM_HZ / RPM_PPR) * (60 / RPM_BUFFER))  // scale 
+
+// choose a reasonable size for the averaging buffer (this one also makes the rpm-multiplier easy to calculate (60 / 12 = 5))
+#define RPM_BUFFER    12  // averaging buffer depth 
+
+#define RPM_SCALE     10  // ((RPM_HZ / RPM_PPR) * (60 / RPM_BUFFER))
 #define RPM_TICKS     (15625 / RPM_HZ)            // timer ticks
 //-----------------------------------------------------------
 
@@ -670,14 +680,14 @@ void turnDecode() {
       
       switch ( enc_states[ enc]) {
         case UP:
-          if ( _rpm_value < RPM_MAX) _rpm_value += RPM_PWM_SCALE;
-          else _rpm_value = RPM_MAX;
+          _rpm_value += RPM_PWM_SCALE;
+          if ( _rpm_value > RPM_MAX) _rpm_value = RPM_MAX;
   
           ui_update = true;
         break;
         
         case DOWN:
-          if ( _rpm_value > RPM_OFF) _rpm_value -= RPM_PWM_SCALE;
+          if ( _rpm_value > RPM_PWM_SCALE) _rpm_value -= RPM_PWM_SCALE;
           else _rpm_value = RPM_OFF;
   
           ui_update = true;
