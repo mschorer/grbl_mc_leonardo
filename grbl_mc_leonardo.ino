@@ -15,23 +15,29 @@
 #include <math.h>
 #include <stdlib.h>
 #include <avr/io.h>
+#include <avr/sleep.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 //#include <util/twi.h>
 //#include <util/delay.h>
 
 #include <Wire.h>
-
-// include the library header
-#include <glcd.h>
-#include <fonts/allFonts.h>
+/*
+#include <TFT.h>  // Arduino LCD library
+#include <SPI.h>
+*/
+// pin definition for the Leonardo
+#define DP_CS   A2  // 20  // A0
+#define DP_DC   A0  // 18  // A2
+#define DP_RST  A1  // 19  // A1
+#define SD_CS   A3  // 21  // A3
 
 #include <PID_AutoTune_v0.h>
 #include <PID_v1.h>
  
 #define F_CPU 16000000
 
-#define VERSION  "1.2c"
+#define VERSION  "1.5b"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -125,6 +131,14 @@
 #define COOLANT_FLOOD 2
 #define COOLANT_BOTH  3
 
+#define RPM_MAXPM     30000
+#define RPM_MAXHZ     (RPM_MAXPM / 60)  // 500
+
+#define RPM_PPR       8  // pulses per rotation
+#define RPM_BUFFER    12  // averaging buffer depth 
+#define RPM_HZ        16  // gate frequency in Hz
+#define RPM_SCALE     ((RPM_HZ / RPM_PPR) * (60 / RPM_BUFFER))  // scale 
+#define RPM_TICKS     (15625 / RPM_HZ)            // timer ticks
 //-----------------------------------------------------------
 
 enum SequencerState_t {
@@ -132,7 +146,7 @@ enum SequencerState_t {
   PAUSE
 };
 
-volatile bool ui_update = false;
+volatile bool ui_update = true;
 
 volatile byte state_machine = PULSE;
 volatile byte servo_pause = 0;
@@ -145,19 +159,17 @@ volatile int _rpm_current = 0;
 
 volatile uint16_t sys_ticks;
 
-volatile uint16_t _rpm_avg[6];
+volatile uint16_t _rpm_avg[RPM_BUFFER];
 volatile uint8_t _rpm_avg_idx = 0;
 volatile uint16_t _rpm_avg_sum = 0;
 
 volatile int _rpm_pwm = PWM_OFF;
 volatile int d_rpm_pwm = -1;
 
-gText spindleMode;
 bool setup_smode = true;
 int _sMode = SPINDLE_OFF;
 int d_sMode = SPINDLE_OFF;
 
-gText rpmDisplay;
 bool setup_rpm = true;
 int d_rpm_value = -1;
 int d_rpm_current = -1;
@@ -165,7 +177,6 @@ int d_rpm_current = -1;
 volatile uint8_t coolant = 0;
 uint8_t d_coolant = 0;
 
-gText toolDisplay;
 bool setup_tooling = true;
 volatile uint8_t tool_index = 0;
 uint8_t d_tool_index = 0;
@@ -175,7 +186,8 @@ uint8_t d_tool_current = 0;
 volatile char message[MSG_LEN] = "";
 char mbuffer[MSG_LEN] = "";
 volatile bool msg_changed = true;
-gText msgDisplay, tlabelDisplay, coolDisplay;
+
+char cbuf[64];
 
 volatile boolean _forceOff = false;
 
@@ -183,16 +195,19 @@ double consKp=1.0, consKi=15.0, consKd=5.0;
 double Setpoint, Input, Output;
 PID myPID(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
 
-void setup( void) {
-  /*
-  GLCD.Init();
-  GLCD.SelectFont(System5x7);
+//TFT TFTscreen = TFT( DP_CS, DP_DC, DP_RST);
 
-  GLCD.CursorTo(0, 7);
-  GLCD.print("gCTRL ");
-  GLCD.print( VERSION);
+void setup( void) {
+/*  
+  TFTscreen.begin();
+  TFTscreen.background(250, 16, 200);
+  
+  TFTscreen.stroke(255, 255, 255);
+  TFTscreen.setTextSize(5);
+  sprintf( cbuf, "gCTRL %s", VERSION);
+  TFTscreen.text( cbuf, 40, 40);
 */
-  for( uint8_t i=0; i < 6; i++) {
+  for( uint8_t i=0; i < RPM_BUFFER; i++) {
     _rpm_avg[ i] = 0;
   }
 
@@ -230,6 +245,7 @@ void setup( void) {
   DDRD &= ~((1<< PD6) || (1<< PD4)); // high
 
   // enable pin-change interrupts for up/down/mute sources
+  EIMSK = 0;
   EICRA = ((0<< ISC31) | (1<< ISC30) | (0<< ISC21) | (1<< ISC20)) | ( EICRA & 0x0f);
   EICRB = (0<< ISC61) | (1<< ISC60);
   EIMSK |= (1<< INT6) | (1<< INT3) | (1<< INT2);
@@ -247,7 +263,7 @@ void setup( void) {
   TCNT0 = 0;
   OCR0A = 0;     // not used
   OCR0B = 0;    // not used
-  TIMSK0 = 0x00;  //(0<< OCIE0B) | (0<< OCIE0A) | (0<< TOIE0);
+  TIMSK0 = 0x01;  //(0<< OCIE0B) | (0<< OCIE0A) | (0<< TOIE0);
 
   // setup timer for rpm gate
   // disconnect pins, 1024x prescaler, ctc mode, interrupt on ocra match
@@ -255,7 +271,7 @@ void setup( void) {
   TCCR3B = 0x0d;  //(0<< ICNC3) | (0<< ICES3) | (0<< WGM33) | (1<< WGM32) | (1<< CS32) | ( 0<< CS31) | (1<< CS30);
   TCCR3C = 0x00;  //(0<< FOC3A);
   TCNT3 = 0;
-  OCR3A = 3125;  //2604;   // set for 6Hz
+  OCR3A = RPM_TICKS;  //2604;   // set for 5Hz
   OCR3B = 0;    // not used
   OCR3C = 0;
   TIMSK3 = 0x02;  //(0<< ICIE3) | (0<< OCIE3C) | (0<< OCIE3B) | (1<< OCIE3A) | (0<< TOIE3);
@@ -303,59 +319,70 @@ void setup( void) {
   Wire.onRequest(requestEvent); // register event
 
   // give esc a change to check adapt to our signal, skip esc setup mode
-//  GLCD.print(" [min]");
+//  TFTscreen.setTextSize(1);
+//  TFTscreen.text( "[max]", 80, 120);
   
   // output servo-off for 1s
   _rpm_pwm = RPM_OFF;
-  setLED( _rpm_pwm, true, true);
   sys_ticks = 0;
   while( sys_ticks < 10) {
-    ;
+    setLED( sys_ticks * 200, true, true);
   }
-//  GLCD.print( "[max]");
+//  TFTscreen.text( "[max]", 100, 120);
 
   // output servo-max for 1s, this make the esc skip setup
   _rpm_pwm = PWM_MAX;
-  setLED( _rpm_pwm, true, false);
 
   sys_ticks = 0;
   while( sys_ticks < 10) {
-    ;
+    setLED( 1000 - sys_ticks * 200, true, true);
   }
 
-//  GLCD.ClearScreen();
+//  TFTscreen.background(0, 0, 0);
   
   Setpoint = 0;
   myPID.SetOutputLimits(0, 2000);
 //  myPID.SetSampleTime( 160);
   myPID.SetMode(AUTOMATIC);
+  
+//  Serial.begin(115200);
+  
+//  Serial.print("grbl_mc ");
+//  Serial.println( VERSION);
 }
 
 void loop( void) { 
 //  setupUI();
+
+  set_sleep_mode(SLEEP_MODE_IDLE);
+  sleep_enable();
   
   // now loop
   _rpm_pwm = PWM_OFF;
-  uint16_t tock = sys_ticks;
-  bool forcePaint = true;
+  uint16_t tock = 0;
 
   while( true) {
-    setLED( ( sys_ticks & 0x01) ? 0x3ff : (_rpm_pwm >> 1), _forceOff /* || ((PINB & (1<< PIN_MASTER)) == HIGH) */, _forceOff);
-/*    
-    updateSMode( forcePaint);
-    updateRpm( forcePaint);
-    updateCoolant( forcePaint);
-    updateTooling( forcePaint);
+    setLED( ( tock & 0x01) ? 0x3ff : (_rpm_pwm >> 1), _forceOff, _forceOff);
+/*
+    updateSMode( ui_update);
+    updateRpm( ui_update);
+    updateCoolant( ui_update);
+    updateTooling( ui_update);
     if ( msg_changed) updateMessage();
 */
     // do busy waiting, using arduino delay/millis etc will block timer1
     // tock frquency is 6Hz
-    while( tock == sys_ticks && !ui_update) {
-      ;
+    if ( sys_ticks >= 8) {
+      sys_ticks = 0;
+//      Serial.print( _rpm_current);
+//      Serial.println( "rpm");
+    }
+
+    while( sys_ticks < 8 && !ui_update) {
+      sleep_cpu();
     }
     ui_update = false;
-    tock = sys_ticks;
-    forcePaint = false;
+    tock++;
     
 //    TOGGLE_LED_L |= (1<< PIN_LED_L);
   }
@@ -363,63 +390,49 @@ void loop( void) {
 
 //----------------------------------------------------------------------------
 // handle ui
-  
+/*  
 void setupUI() {
-  GLCD.CursorTo(0,2);
-  GLCD.Printf("rpm");
+  // rpmDisplay
+  TFTscreen.setTextSize(4);
+  TFTscreen.text( "-RPM-", 80, 0);
 
-  coolDisplay = gText( 0, 28, 63, 44, SCROLL_UP);
-  coolDisplay.SelectFont( System5x7);
-  coolDisplay.SetFontColor(BLACK); // set font color 
-  coolDisplay.ClearArea();
-  coolDisplay.CursorTo(0,0);
-  coolDisplay.print("Coolant");
+  TFTscreen.setTextSize(1);
+  TFTscreen.text( "-----", 0, 8);
+  TFTscreen.text( "rpm", 0, 16);
 
-  spindleMode = gText(42, 9, 55, 24, SCROLL_DOWN);
-  spindleMode.SelectFont( fixed_bold10x15);
-  spindleMode.SetFontColor(BLACK); // set font color 
-  spindleMode.ClearArea();
+  // coolant
+  TFTscreen.setTextSize(1);
+  TFTscreen.text( "Coolant", 0, 40);
 
-  rpmDisplay = gText(57, 0, 127, 24, SCROLL_DOWN);
-  rpmDisplay.SelectFont( lcdnums14x24 /*Verdana24 fixednums15x31*/);
-  rpmDisplay.SetFontColor(BLACK); // set font color 
-  rpmDisplay.ClearArea();
+  // spindleMode
+  TFTscreen.setTextSize(2);
+  TFTscreen.text( "RL", 40, 16);
 
-  GLCD.DrawLine( 0,25,127,25,BLACK);
+  // tlabelDisplay
+  TFTscreen.setTextSize(1);
+  TFTscreen.text( "Tool#", 80, 32);
+  TFTscreen.text( "->#", 80, 40);
 
-  tlabelDisplay = gText( 70, 28, 114, 44, SCROLL_DOWN);
-  tlabelDisplay.SelectFont( System5x7);
-  tlabelDisplay.SetFontColor(BLACK); // set font color 
-  tlabelDisplay.ClearArea();
+  // toolDisplay
+  TFTscreen.setTextSize(2);
+  TFTscreen.text( "T", 130, 32);
 
-  tlabelDisplay.CursorTo( 0,0);
-  tlabelDisplay.print("Tool#");
-  tlabelDisplay.CursorTo( 2,1);
-  tlabelDisplay.print("->#");
+  // msgDisplay
+  TFTscreen.setTextSize(1);
+  TFTscreen.text( "msg", 0, 112);
 
-  toolDisplay = gText( 115, 28, 127, 44, SCROLL_DOWN);
-  toolDisplay.SelectFont( lcdnums12x16);
-  toolDisplay.SetFontColor(BLACK); // set font color 
-  toolDisplay.ClearArea();
-
-  GLCD.DrawLine( 0,45,127,45,BLACK);
-
-  msgDisplay = gText( 0, 48, 127, 63, SCROLL_UP);
-  msgDisplay.SelectFont( System5x7);
-  msgDisplay.SetFontColor(BLACK); // set font color 
-  msgDisplay.ClearArea();
-  
-  GLCD.DrawRect( 0,0,52,6,BLACK);
+  // servo bar  
+  TFTscreen.rect( 0, 0, 80, 8, 0);
 }
 
 void updateSMode( bool force) {
   if ( _sMode != d_sMode || force) {
-    spindleMode.CursorTo(0,0);
+  TFTscreen.setTextSize(2);
     switch( _sMode) {
-      case SPINDLE_CW: spindleMode.print( "R"); break;
-      case SPINDLE_CCW: spindleMode.print( "L"); break;
+      case SPINDLE_CW: TFTscreen.text( "R", 40, 16); break;
+      case SPINDLE_CCW: TFTscreen.text( "L", 40, 16); break;
       case SPINDLE_OFF:
-      default: spindleMode.print( "-"); break;
+      default: TFTscreen.text( "-", 40, 16); break;
     }
     d_sMode = _sMode;
   }
@@ -427,50 +440,57 @@ void updateSMode( bool force) {
 
 void updateRpm( bool force) {
   if ( d_rpm_pwm != _rpm_pwm || force) {  
-/*    GLCD.CursorTo(0,0);
-    if ( _rpm_pwm) GLCD.Printf("%05d", _rpm_pwm);
-    else GLCD.Puts( "-off-");
-*/    d_rpm_pwm = _rpm_pwm;
-    int bar = max( 0, min( 50, round( _rpm_pwm / 40)));
-    GLCD.FillRect( 1,1,bar,4,BLACK);
-    if ( bar < 50) GLCD.FillRect( bar+1,1,50-bar,4,WHITE);
+    d_rpm_pwm = _rpm_pwm;
+    int bar = max( 0, min( 80, round( _rpm_pwm / 25)));
+    TFTscreen.stroke(255, 255, 255);
+    TFTscreen.rect( 1, 1, bar, 4, 0);
+    if ( bar < 80) {
+      TFTscreen.stroke(0,0,0);
+      TFTscreen.rect( bar+1,1,80-bar,4, 0);
+    }
   }
   if ( d_rpm_value != _rpm_value || force) {  
-    GLCD.CursorTo(0,1);
-    if ( _rpm_value) GLCD.Printf("%05d", _rpm_value);
-    else GLCD.Puts( "-off-");
+    if ( _rpm_value) sprintf( cbuf, "%05d", _rpm_value);  //String( _rpm_value).toCharArray( cbuf, 5);  //GLCD.Printf("%05d", _rpm_value);
+    else sprintf( cbuf, "-off-");
+    TFTscreen.setTextSize(1);
+    TFTscreen.text( cbuf, 0, 8);
     d_rpm_value = _rpm_value;
   }
-  if ( d_rpm_current != _rpm_current || force) {  
-    rpmDisplay.CursorTo(0,0);
-    if ( _rpm_current < 20000) rpmDisplay.Printf("%05d", _rpm_current);
+  if ( d_rpm_current != _rpm_current || force) {
+    if ( _rpm_current < 20000) sprintf( cbuf, "%05d", _rpm_current);  //rpmDisplay.Printf("%05d", _rpm_current);
+    TFTscreen.setTextSize(4);
+    TFTscreen.text( cbuf, 80, 0);
     d_rpm_current = _rpm_current;
   }
 }
 
 void updateCoolant( bool force) {
   if ( coolant != d_coolant || force) {
-    coolDisplay.CursorTo(0,1);
+    TFTscreen.setTextSize(2);
+    TFTscreen.text( "Coolant", 0, 48);
     switch( coolant) {
-      case COOLANT_BOTH: coolDisplay.print( "[MST/FLD]"); break;
-      case COOLANT_FLOOD: coolDisplay.print( "[---/FLD]"); break;
-      case COOLANT_MIST: coolDisplay.print( "[MST/---]"); break;
+      case COOLANT_BOTH: sprintf( cbuf, "[MST/FLD]"); break;
+      case COOLANT_FLOOD: sprintf( cbuf, "[---/FLD]"); break;
+      case COOLANT_MIST: sprintf( cbuf, "[MST/---]"); break;
       case COOLANT_OFF:
-      default: coolDisplay.print( "[---/---]"); break;
+      default: sprintf( cbuf, "[---/---]"); break;
     }
+    TFTscreen.text( cbuf, 0, 56);
     d_coolant = coolant;
   }
 }
 
 void updateTooling( bool force) {
   if ( tool_index != d_tool_index || force) {
-    tlabelDisplay.CursorTo( 5, 1);
-    tlabelDisplay.print( tool_index, DEC);
+    TFTscreen.setTextSize(1);
+    sprintf( cbuf, "%i", tool_index);
+    TFTscreen.text( cbuf, 110, 40);
     d_tool_index = tool_index;
   }
   if ( tool_current != d_tool_current || force) {
-    toolDisplay.CursorTo( 0,0);
-    toolDisplay.Printf( "%01d", tool_current);
+    TFTscreen.setTextSize(2);
+    sprintf( cbuf, "%i", tool_current);
+    TFTscreen.text( cbuf, 120, 32);
     d_tool_current = tool_current;
   }
 }
@@ -478,30 +498,36 @@ void updateTooling( bool force) {
 void updateMessage() {
   uint8_t i=0;
   uint8_t j=0;
+  uint8_t l=1;
   
+  TFTscreen.setTextSize(1);
+  String line[2];
+  TFTscreen.text( "Tool#", 80, 32);
+    
   while(( j < MSG_MAX) && ( i < MSG_LEN)) {
     if ( message[i] == 0) break;
     
-    mbuffer[i] = message[i];
+    line[l] += message[i];
     i++;
 
     switch( message[i]) {
       case 10:
       case 13:
+        line[l].toCharArray( cbuf, 40);
+        TFTscreen.text( cbuf, 0, 112+8*l);
+        l++;
       break;
     
       default:
         j++;
     }
   }
-  mbuffer[i] = 0;  
 
-  msgDisplay.ClearArea();
-  msgDisplay.CursorTo(0,0);
-  msgDisplay.Puts( mbuffer);
+  line[l].toCharArray( cbuf, 40);
+  TFTscreen.text( cbuf, 0, 112+8*l);
   msg_changed = false;  
 }
-
+*/
 //----------------------------------------------------------------------------
 // handle i2c protocol
   
@@ -681,11 +707,19 @@ ISR( INT6_vect) {
 }
 
 //----------------------------------------------------------------------------
+// rpm counter overflow
+
+ISR( TIMER0_OVF) {
+  ;
+}
+
+//----------------------------------------------------------------------------
 // rpm counter gate interrupt
   
 // rpm measurement gate clock
 ISR(TIMER3_COMPA_vect) {
   sys_ticks++;
+  
   uint16_t rotations = (uint16_t) TCNT0;
 
   _rpm_avg_sum -= _rpm_avg[ _rpm_avg_idx];
@@ -693,12 +727,13 @@ ISR(TIMER3_COMPA_vect) {
 
   _rpm_avg[ _rpm_avg_idx] = rotations;
   _rpm_avg_idx++;
-  if ( _rpm_avg_idx > 5) _rpm_avg_idx = 0;
+  if ( _rpm_avg_idx >= RPM_BUFFER) _rpm_avg_idx = 0;
   
-  _rpm_current = _rpm_avg_sum * 50;  // * 5 * 60 / 6
+  uint16_t last_rpm = _rpm_current;
+  _rpm_current = _rpm_avg_sum * RPM_SCALE;  // * RPM_HZ * 60 / RPM_BUFFER
   TCNT0 = 0;
   
-  if ( _rpm_current != d_rpm_current) ui_update = true;
+  if ( _rpm_current != last_rpm) ui_update = true;
 
   Input = (double) _rpm_current;
   myPID.Compute();
@@ -727,7 +762,7 @@ ISR(TIMER1_COMPA_vect) {
     }
 }//end ISR TIM0_COMPA_vect
 
-void setLED( byte val, boolean doBlink, boolean freq) {
+void setLED( int val, boolean doBlink, boolean freq) {
 
   TC4H  = (val >> 9) & 0x03;
   OCR4A = ( val >> 1) & 0xff;
