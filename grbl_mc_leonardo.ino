@@ -41,7 +41,7 @@
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "2.0a"
+#define VERSION  "2.0b"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -180,6 +180,9 @@ volatile uint16_t _rpm_avg_sum = 0;
 volatile int _rpm_pwm = PWM_OFF;
 volatile int d_rpm_pwm = -1;
 
+volatile boolean _motor_manual = false;
+volatile boolean d_motor_manual = false;
+
 bool setup_smode = true;
 int _sMode = SPINDLE_OFF;
 int d_sMode = SPINDLE_OFF;
@@ -203,8 +206,6 @@ char mbuffer[MSG_LEN] = "";
 volatile bool msg_changed = true;
 
 char cbuf[64];
-
-volatile boolean _forceOff = false;
 
 double consKp=1.0, consKi=15.0, consKd=5.0;
 double Setpoint, Input, Output;
@@ -390,7 +391,7 @@ void loop( void) {
   uint16_t tock = 0;
 
   while( true) {
-    setLED( ( tock & 0x01) ? 0x3ff : (_rpm_pwm >> 1), _forceOff, _forceOff);
+    setLED( ( tock & 0x01) ? 0x3ff : (_rpm_pwm >> 1), _motor_manual, _motor_manual);
 
     updateSMode( ui_update);
     updateRpm( ui_update);
@@ -424,7 +425,7 @@ void setupUI() {
 
   // rpmDisplay
   TFTscreen.setTextSize(4);
-  TFTscreen.setCursor( 40, 0);
+  TFTscreen.setCursor( 40, 2);
   TFTscreen.print( "-RPM-");
 
   TFTscreen.setTextSize(1);
@@ -435,13 +436,13 @@ void setupUI() {
   TFTscreen.print( "-----");
 
   // spindleMode
-  TFTscreen.setTextSize(3);
-  TFTscreen.setCursor( 0, 10);
+  TFTscreen.setTextSize(4);
+  TFTscreen.setCursor( 2, 2);
   TFTscreen.print( "X");
 
   // servo bar  
   TFTscreen.noFill();
-  TFTscreen.rect( 0, 35, 160, 8, 0);
+  TFTscreen.rect( 2, 35, 156, 8, 0);
 
   // coolant
   TFTscreen.setTextSize(1);
@@ -465,31 +466,41 @@ void setupUI() {
 }
 
 void updateSMode( bool force) {
-  if ( _sMode != d_sMode || force) {
+  if ( _sMode != d_sMode || d_motor_manual != _motor_manual || force) {
 //    TFTscreen.fill( 0,0,0);
 //    TFTscreen.rect( 0,16,18,24);
     TFTscreen.setTextSize(4);
-    TFTscreen.setCursor( 0, 0);
-    switch( _sMode) {
-      case SPINDLE_CW: TFTscreen.print( "R"); break;
-      case SPINDLE_CCW: TFTscreen.print( "L"); break;
-      case SPINDLE_OFF:
-      default: TFTscreen.print( "-"); break;
+    TFTscreen.setCursor( 2, 2);
+    if ( _motor_manual) {
+      switch( _sMode) {
+        case SPINDLE_CW: TFTscreen.print( "r"); break;
+        case SPINDLE_CCW: TFTscreen.print( "l"); break;
+        case SPINDLE_OFF:
+        default: TFTscreen.print( "m"); break;
+      }
+    } else {
+      switch( _sMode) {
+        case SPINDLE_CW: TFTscreen.print( "R"); break;
+        case SPINDLE_CCW: TFTscreen.print( "L"); break;
+        case SPINDLE_OFF:
+        default: TFTscreen.print( "-"); break;
+      }
     }
     d_sMode = _sMode;
+    d_motor_manual = _motor_manual;
   }
 }
 
 void updateRpm( bool force) {
   if ( d_rpm_pwm != _rpm_pwm || force) {  
     d_rpm_pwm = _rpm_pwm;
-    int bar = max( 0, min( 158, round( _rpm_pwm / 12.5)));
+    int bar = max( 0, min( 154, round( _rpm_pwm / 13)));
     TFTscreen.noStroke();
     TFTscreen.fill( ST7735_GREEN);
-    TFTscreen.rect( 1, 36, bar, 6);
-    if ( bar < 158) {
+    TFTscreen.rect( 3, 36, bar, 6);
+    if ( bar < 153) {
       TFTscreen.fill( ST7735_BLACK);
-      TFTscreen.rect( bar+1, 36, 158-bar, 6);
+      TFTscreen.rect( bar+4, 36, 153-bar, 6);
     }
     TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
   }
@@ -519,7 +530,7 @@ void updateRpm( bool force) {
     TFTscreen.setTextColor( color, ST7735_BLACK);
   
     TFTscreen.setTextSize(4);
-    TFTscreen.setCursor(40, 0);
+    TFTscreen.setCursor(40, 2);
     TFTscreen.print( cbuf);
     d_rpm_current = _rpm_current;
     d_rpm_color = color;
@@ -636,6 +647,7 @@ void receiveEvent( int howMany) {
             case CMD_M3:
             case CMD_M4: _sMode = par; Setpoint = _rpm_value;
               PORT_LED_TX &= !(1<< PIN_LED_TX);
+              _motor_manual = false;
             break;
             case CMD_M5: _sMode = par; Setpoint = 0;
               PORT_LED_TX |= (1<< PIN_LED_TX);
@@ -742,15 +754,15 @@ void turnDecode() {
       
       switch ( enc_states[ enc]) {
         case UP:
-          _rpm_value += RPM_PWM_SCALE;
-          if ( _rpm_value > RPM_MAX) _rpm_value = RPM_MAX;
+          if ( _rpm_value > RPM_PWM_SCALE) _rpm_value -= RPM_PWM_SCALE;
+          else _rpm_value = RPM_OFF;
   
           ui_update = true;
         break;
         
         case DOWN:
-          if ( _rpm_value > RPM_PWM_SCALE) _rpm_value -= RPM_PWM_SCALE;
-          else _rpm_value = RPM_OFF;
+          _rpm_value += RPM_PWM_SCALE;
+          if ( _rpm_value > RPM_MAX) _rpm_value = RPM_MAX;
   
           ui_update = true;
         break;
@@ -772,8 +784,8 @@ ISR( INT6_vect) {
   if ( mute ^ pin_mute) {
     pin_mute = mute;
 
-    if (( mute & (1<< PIN_MUTE)) == LOW) _forceOff = !_forceOff;
-  
+    if (( mute & (1<< PIN_MUTE)) == LOW) _motor_manual = !_motor_manual;
+    
     ui_update = true;
   }
 }
@@ -809,7 +821,7 @@ ISR(TIMER3_COMPA_vect) {
 
   Input = (double) _rpm_current;
   myPID.Compute();
-  _rpm_pwm = (int) Output;   
+  _rpm_pwm = (_motor_manual ^ (_sMode != SPINDLE_OFF)) ? 0 : (int) Output;
 }
 
 //----------------------------------------------------------------------------
@@ -829,7 +841,6 @@ ISR(TIMER1_COMPA_vect) {
         OCR1A = SERVO_PULSE_19MS - _rpm_pwm;
         PORT_SERVO &= ~( 1 << PIN_SERVO);
 
-//        _rpm_pwm = ( _forceOff ? 0 : (_rpm_value / RPM_PWM_SCALE));
         state_machine = PULSE;  
     }
 }//end ISR TIM0_COMPA_vect
