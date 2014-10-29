@@ -14,6 +14,8 @@
   - uses IDLE sleep mode
 */
 
+#define F_CPU 16000000UL  // 16 MHz
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <math.h>
@@ -26,29 +28,27 @@
 //#include <util/delay.h>
 
 #include <Wire.h>
-/*
+
 #include <TFT.h>  // Arduino LCD library
 #include <SPI.h>
-*/
+
+#include <PID_AutoTune_v0.h>
+#include <PID_v1.h>
+ 
 // pin definition for the Leonardo
 #define DP_CS   A2  // 20  // A0
 #define DP_DC   A0  // 18  // A2
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#include <PID_AutoTune_v0.h>
-#include <PID_v1.h>
- 
-#define F_CPU 16000000
-
-#define VERSION  "1.5b"
+#define VERSION  "2.0a"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
 #endif
 
-#define PIN_SDA 0
-#define PIN_SCK 2
+#define SDA 0
+#define SCL 2
 
 #define DIR_SERVO  DDRC
 #define PORT_SERVO PORTC
@@ -83,6 +83,10 @@
 #define DIR_RPM_SENSE   DDRD
 #define PORT_RPM_SENSE  PORTD
 #define PIN_RPM_SENSE   PD7
+
+#define DIR_BACKLIGHT   DDRD
+#define PORT_BACKLIGHT  PORTD
+#define PIN_BACKLIGHT   PD6
 
 #define DEBOUNCE_TICKS 2
 
@@ -119,7 +123,7 @@
 #define CMD_M8  0x08
 #define CMD_M9  0x09
 
-// spindle mode alogn Mx commands
+// spindle modes following Mx commands
 #define SPINDLE_CW   3
 #define SPINDLE_CCW  4
 #define SPINDLE_OFF  5
@@ -132,7 +136,7 @@
 
 #define RPM_OFF 0
 #define RPM_MAX     30000
-#define RPM_PWM_SCALE ((RPM_MAX - RPM_OFF) / 120)
+#define RPM_PWM_SCALE 25    //((RPM_MAX - RPM_OFF) / 120)
 
 #define RPM_MAXHZ     (RPM_MAX / 60)  // 500
 #define RPM_PPR       8  // pulses per rotation
@@ -145,9 +149,9 @@
 #define RPM_HZ        16  // gate frequency in Hz
 
 // choose a reasonable size for the averaging buffer (this one also makes the rpm-multiplier easy to calculate (60 / 12 = 5))
-#define RPM_BUFFER    12  // averaging buffer depth 
+#define RPM_BUFFER    24  // averaging buffer depth 
 
-#define RPM_SCALE     10  // ((RPM_HZ / RPM_PPR) * (60 / RPM_BUFFER))
+#define RPM_SCALE     5  // ((RPM_HZ / RPM_PPR) * (60 / RPM_BUFFER))
 #define RPM_TICKS     (15625 / RPM_HZ)            // timer ticks
 //-----------------------------------------------------------
 
@@ -183,6 +187,7 @@ int d_sMode = SPINDLE_OFF;
 bool setup_rpm = true;
 int d_rpm_value = -1;
 int d_rpm_current = -1;
+uint16_t d_rpm_color = 0;
 
 volatile uint8_t coolant = 0;
 uint8_t d_coolant = 0;
@@ -205,18 +210,26 @@ double consKp=1.0, consKi=15.0, consKd=5.0;
 double Setpoint, Input, Output;
 PID myPID(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
 
-//TFT TFTscreen = TFT( DP_CS, DP_DC, DP_RST);
+TFT TFTscreen = TFT( DP_CS, DP_DC, DP_RST);
 
 void setup( void) {
-/*  
-  TFTscreen.begin();
-  TFTscreen.background(250, 16, 200);
   
-  TFTscreen.stroke(255, 255, 255);
-  TFTscreen.setTextSize(5);
-  sprintf( cbuf, "gCTRL %s", VERSION);
-  TFTscreen.text( cbuf, 40, 40);
-*/
+  TFTscreen.begin();
+  TFTscreen.setRotation( 3);
+  TFTscreen.background( ST7735_BLACK);
+  
+  TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
+  TFTscreen.stroke( ST7735_WHITE);
+  TFTscreen.fill( ST7735_BLACK);
+
+  TFTscreen.setTextSize(3);
+  TFTscreen.setCursor( 40, 30);
+  TFTscreen.print( "gCtrl");
+  TFTscreen.setTextSize(1);
+  sprintf( cbuf, "%s", VERSION);
+  TFTscreen.setCursor( 70, 70);
+  TFTscreen.print( cbuf);
+  
   for( uint8_t i=0; i < RPM_BUFFER; i++) {
     _rpm_avg[ i] = 0;
   }
@@ -233,6 +246,9 @@ void setup( void) {
   
   DIR_RPM_SENSE &= ~(1<< PIN_RPM_SENSE);
   PORT_RPM_SENSE |= (1<< PIN_RPM_SENSE);  // enable pullup for input
+  
+  DIR_BACKLIGHT |= (1<< PIN_BACKLIGHT);
+  PORT_BACKLIGHT &= ~(1<< PIN_BACKLIGHT);  // enable pullup for input
 
   // outputs
   DIR_SERVO |= (1<< PIN_SERVO);      // set PE6 as output
@@ -247,12 +263,12 @@ void setup( void) {
   PORT_LED_RX |= (1<< PIN_LED_RX);
 
   DIR_LED_TX |= (1<< PIN_LED_TX);      // set Pc7 as output
-  PORT_LED_TX |= (1<< PIN_LED_RX);
+  PORT_LED_TX |= (1<< PIN_LED_TX);
 
   // set spares to input
 //  DDRC &= ~(1<< PC7);                // high
-  DDRF &= ~(1<< PF7);                // high
-  DDRD &= ~((1<< PD6) || (1<< PD4)); // high
+  DDRF &= ~((1<< PF1) || (1<< PF0));                // high
+  DDRD &= ~((1<< PD4) || (1<< PD1) || (1<< PD0)); // high
 
   // enable pin-change interrupts for up/down/mute sources
   EIMSK = 0;
@@ -324,13 +340,15 @@ void setup( void) {
   //----------------------------------------------------------------------------
   // bring up services
   
-  Wire.begin( 0x5c);                // join i2c bus with address $5c for SpeedControl
+  Wire.begin( 0x5c);            // join i2c bus with address $5c for SpeedControl
   Wire.onReceive(receiveEvent); // register event
   Wire.onRequest(requestEvent); // register event
 
   // give esc a change to check adapt to our signal, skip esc setup mode
-//  TFTscreen.setTextSize(1);
-//  TFTscreen.text( "[max]", 80, 120);
+  TFTscreen.setTextSize(1);
+  
+  TFTscreen.setCursor( 48, 90);
+  TFTscreen.print( "[min] ");
   
   // output servo-off for 1s
   _rpm_pwm = RPM_OFF;
@@ -338,17 +356,17 @@ void setup( void) {
   while( sys_ticks < 10) {
     setLED( sys_ticks * 200, true, true);
   }
-//  TFTscreen.text( "[max]", 100, 120);
 
   // output servo-max for 1s, this make the esc skip setup
   _rpm_pwm = PWM_MAX;
+  TFTscreen.print( "[max]");
 
   sys_ticks = 0;
   while( sys_ticks < 10) {
     setLED( 1000 - sys_ticks * 200, true, true);
   }
 
-//  TFTscreen.background(0, 0, 0);
+  TFTscreen.background( ST7735_BLACK);
   
   Setpoint = 0;
   myPID.SetOutputLimits(0, 2000);
@@ -362,7 +380,7 @@ void setup( void) {
 }
 
 void loop( void) { 
-//  setupUI();
+  setupUI();
 
   set_sleep_mode(SLEEP_MODE_IDLE);
   sleep_enable();
@@ -373,13 +391,13 @@ void loop( void) {
 
   while( true) {
     setLED( ( tock & 0x01) ? 0x3ff : (_rpm_pwm >> 1), _forceOff, _forceOff);
-/*
+
     updateSMode( ui_update);
     updateRpm( ui_update);
     updateCoolant( ui_update);
     updateTooling( ui_update);
     if ( msg_changed) updateMessage();
-*/
+
     // do busy waiting, using arduino delay/millis etc will block timer1
     // tock frquency is 6Hz
     if ( sys_ticks >= 8) {
@@ -400,49 +418,63 @@ void loop( void) {
 
 //----------------------------------------------------------------------------
 // handle ui
-/*  
+
 void setupUI() {
+  TFTscreen.setTextColor( ST7735_YELLOW, ST7735_BLACK);
+
   // rpmDisplay
   TFTscreen.setTextSize(4);
-  TFTscreen.text( "-RPM-", 80, 0);
+  TFTscreen.setCursor( 40, 0);
+  TFTscreen.print( "-RPM-");
 
   TFTscreen.setTextSize(1);
-  TFTscreen.text( "-----", 0, 8);
-  TFTscreen.text( "rpm", 0, 16);
+  TFTscreen.setCursor( 0, 48);
+  TFTscreen.print( "RPM");
+  TFTscreen.setTextSize(2);
+  TFTscreen.setCursor( 40, 48);
+  TFTscreen.print( "-----");
+
+  // spindleMode
+  TFTscreen.setTextSize(3);
+  TFTscreen.setCursor( 0, 10);
+  TFTscreen.print( "X");
+
+  // servo bar  
+  TFTscreen.noFill();
+  TFTscreen.rect( 0, 35, 160, 8, 0);
 
   // coolant
   TFTscreen.setTextSize(1);
-  TFTscreen.text( "Coolant", 0, 40);
-
-  // spindleMode
-  TFTscreen.setTextSize(2);
-  TFTscreen.text( "RL", 40, 16);
+  TFTscreen.setCursor( 0, 68);
+  TFTscreen.print( "Coolant");
 
   // tlabelDisplay
   TFTscreen.setTextSize(1);
-  TFTscreen.text( "Tool#", 80, 32);
-  TFTscreen.text( "->#", 80, 40);
+  TFTscreen.setCursor( 122, 48);
+  TFTscreen.print( "->#");
+  TFTscreen.setCursor( 110, 68);
+  TFTscreen.print( "Tool#");
 
   // toolDisplay
-  TFTscreen.setTextSize(2);
-  TFTscreen.text( "T", 130, 32);
+  TFTscreen.setTextSize(3);
+  TFTscreen.setCursor( 142, 70);
+  TFTscreen.print( "T");
 
   // msgDisplay
-  TFTscreen.setTextSize(1);
-  TFTscreen.text( "msg", 0, 112);
-
-  // servo bar  
-  TFTscreen.rect( 0, 0, 80, 8, 0);
+  TFTscreen.drawFastHLine( 0, 96, 160, ST7735_WHITE);
 }
 
 void updateSMode( bool force) {
   if ( _sMode != d_sMode || force) {
-  TFTscreen.setTextSize(2);
+//    TFTscreen.fill( 0,0,0);
+//    TFTscreen.rect( 0,16,18,24);
+    TFTscreen.setTextSize(4);
+    TFTscreen.setCursor( 0, 0);
     switch( _sMode) {
-      case SPINDLE_CW: TFTscreen.text( "R", 40, 16); break;
-      case SPINDLE_CCW: TFTscreen.text( "L", 40, 16); break;
+      case SPINDLE_CW: TFTscreen.print( "R"); break;
+      case SPINDLE_CCW: TFTscreen.print( "L"); break;
       case SPINDLE_OFF:
-      default: TFTscreen.text( "-", 40, 16); break;
+      default: TFTscreen.print( "-"); break;
     }
     d_sMode = _sMode;
   }
@@ -451,33 +483,52 @@ void updateSMode( bool force) {
 void updateRpm( bool force) {
   if ( d_rpm_pwm != _rpm_pwm || force) {  
     d_rpm_pwm = _rpm_pwm;
-    int bar = max( 0, min( 80, round( _rpm_pwm / 25)));
-    TFTscreen.stroke(255, 255, 255);
-    TFTscreen.rect( 1, 1, bar, 4, 0);
-    if ( bar < 80) {
-      TFTscreen.stroke(0,0,0);
-      TFTscreen.rect( bar+1,1,80-bar,4, 0);
+    int bar = max( 0, min( 158, round( _rpm_pwm / 12.5)));
+    TFTscreen.noStroke();
+    TFTscreen.fill( ST7735_GREEN);
+    TFTscreen.rect( 1, 36, bar, 6);
+    if ( bar < 158) {
+      TFTscreen.fill( ST7735_BLACK);
+      TFTscreen.rect( bar+1, 36, 158-bar, 6);
     }
+    TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
   }
+
   if ( d_rpm_value != _rpm_value || force) {  
     if ( _rpm_value) sprintf( cbuf, "%05d", _rpm_value);  //String( _rpm_value).toCharArray( cbuf, 5);  //GLCD.Printf("%05d", _rpm_value);
     else sprintf( cbuf, "-off-");
-    TFTscreen.setTextSize(1);
-    TFTscreen.text( cbuf, 0, 8);
+//    TFTscreen.fill( 0,0,0);
+//    TFTscreen.rect( 0,0,30,8);
+    TFTscreen.setTextSize(2);
+    TFTscreen.setCursor(40, 48);
+    TFTscreen.print( cbuf);
     d_rpm_value = _rpm_value;
   }
-  if ( d_rpm_current != _rpm_current || force) {
+  
+  int rpm_diff = _rpm_value - _rpm_current;
+  uint16_t color;
+
+  if ( abs( rpm_diff) > (_rpm_value / 8)) {
+    if ( rpm_diff > 0) color = ST7735_BLUE;
+    else color = ST7735_CYAN;
+  } else color = ST7735_GREEN;
+
+  if ( d_rpm_current != _rpm_current || d_rpm_color != color || force) {
     if ( _rpm_current < 20000) sprintf( cbuf, "%05d", _rpm_current);  //rpmDisplay.Printf("%05d", _rpm_current);
+
+    TFTscreen.setTextColor( color, ST7735_BLACK);
+  
     TFTscreen.setTextSize(4);
-    TFTscreen.text( cbuf, 80, 0);
+    TFTscreen.setCursor(40, 0);
+    TFTscreen.print( cbuf);
     d_rpm_current = _rpm_current;
+    d_rpm_color = color;
+    TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
   }
 }
 
 void updateCoolant( bool force) {
   if ( coolant != d_coolant || force) {
-    TFTscreen.setTextSize(2);
-    TFTscreen.text( "Coolant", 0, 48);
     switch( coolant) {
       case COOLANT_BOTH: sprintf( cbuf, "[MST/FLD]"); break;
       case COOLANT_FLOOD: sprintf( cbuf, "[---/FLD]"); break;
@@ -485,22 +536,32 @@ void updateCoolant( bool force) {
       case COOLANT_OFF:
       default: sprintf( cbuf, "[---/---]"); break;
     }
-    TFTscreen.text( cbuf, 0, 56);
+//    TFTscreen.fill( 0,0,0);
+//    TFTscreen.rect( 0,68,108,16);
+    TFTscreen.setTextSize(2);
+    TFTscreen.setCursor( 0, 78);
+    TFTscreen.print( cbuf);
     d_coolant = coolant;
   }
 }
 
 void updateTooling( bool force) {
   if ( tool_index != d_tool_index || force) {
-    TFTscreen.setTextSize(1);
+//    TFTscreen.fill( 0,0,0);
+//    TFTscreen.rect( 120,60,6,8);
+    TFTscreen.setTextSize(2);
     sprintf( cbuf, "%i", tool_index);
-    TFTscreen.text( cbuf, 110, 40);
+    TFTscreen.setCursor( 148, 48);
+    TFTscreen.print( cbuf);
     d_tool_index = tool_index;
   }
   if ( tool_current != d_tool_current || force) {
-    TFTscreen.setTextSize(2);
+//    TFTscreen.fill( 0,0,0);
+//    TFTscreen.rect( 140,60,18,24);
+    TFTscreen.setTextSize(3);
     sprintf( cbuf, "%i", tool_current);
-    TFTscreen.text( cbuf, 120, 32);
+    TFTscreen.setCursor( 142, 70);
+    TFTscreen.print( cbuf);
     d_tool_current = tool_current;
   }
 }
@@ -512,7 +573,6 @@ void updateMessage() {
   
   TFTscreen.setTextSize(1);
   String line[2];
-  TFTscreen.text( "Tool#", 80, 32);
     
   while(( j < MSG_MAX) && ( i < MSG_LEN)) {
     if ( message[i] == 0) break;
@@ -524,7 +584,8 @@ void updateMessage() {
       case 10:
       case 13:
         line[l].toCharArray( cbuf, 40);
-        TFTscreen.text( cbuf, 0, 112+8*l);
+        TFTscreen.setCursor( 0, 98+8*l);
+        TFTscreen.print( cbuf);
         l++;
       break;
     
@@ -534,10 +595,11 @@ void updateMessage() {
   }
 
   line[l].toCharArray( cbuf, 40);
-  TFTscreen.text( cbuf, 0, 112+8*l);
+  TFTscreen.setCursor( 0, 198+8*l);
+  TFTscreen.print( cbuf);
   msg_changed = false;  
 }
-*/
+
 //----------------------------------------------------------------------------
 // handle i2c protocol
   
