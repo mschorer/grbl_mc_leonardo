@@ -32,7 +32,7 @@
 #include <TFT.h>  // Arduino LCD library
 #include <SPI.h>
 
-#include <PID_AutoTune_v0.h>
+//#include <PID_AutoTune_v0.h>
 #include <PID_v1.h>
  
 // pin definition for the Leonardo
@@ -41,7 +41,7 @@
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "2.0b"
+#define VERSION  "2.2b"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -79,6 +79,11 @@
 #define DIR_MUTE    DDRE
 #define PORT_MUTE   PORTE
 #define PIN_MUTE    PE6
+
+#define PINB_ESC_PWR_SENSE  PINB
+#define DIR_ESC_PWR_SENSE   DDRB
+#define PORT_ESC_PWR_SENSE  PORTB
+#define PIN_ESC_PWR_SENSE   PB4
 
 #define DIR_RPM_SENSE   DDRD
 #define PORT_RPM_SENSE  PORTD
@@ -123,6 +128,10 @@
 #define CMD_M8  0x08
 #define CMD_M9  0x09
 
+#define CMD_MSG_TXT   0x00
+#define CMD_MSG_LIM   0x01
+#define CMD_MSG_FLT   0x02
+
 // spindle modes following Mx commands
 #define SPINDLE_CW   3
 #define SPINDLE_CCW  4
@@ -134,24 +143,32 @@
 #define COOLANT_FLOOD 2
 #define COOLANT_BOTH  3
 
+#define ESC_NC         0
+#define ESC_SETUP_MIN  1
+#define ESC_SETUP_MAX  2
+#define ESC_AUTO       3
+
+#define ESC_TICKS_MIN  16
+#define ESC_TICKS_MAX  4
+
 #define RPM_OFF 0
-#define RPM_MAX     30000
+#define RPM_MAX     15000
 #define RPM_PWM_SCALE 25    //((RPM_MAX - RPM_OFF) / 120)
 
-#define RPM_MAXHZ     (RPM_MAX / 60)  // 500
+#define RPM_MAXHZ     (RPM_MAX / 60)  // 250
 #define RPM_PPR       8  // pulses per rotation
 
 // calculate gate frequency
-// RPM_MAXHZ * RPM_PPR = 500 * 8 = 4000 pulses per second
-// make it fit in 8bit: 4000 / 256 = 15.625
+// RPM_MAXHZ * RPM_PPR = 250 * 8 = 2000 pulses per second
+// make it fit in 8bit: 2000 / 256 = 7,8125
 // choose 16 
 
-#define RPM_HZ        16  // gate frequency in Hz
+#define RPM_HZ        8  // gate frequency in Hz
 
-// choose a reasonable size for the averaging buffer (this one also makes the rpm-multiplier easy to calculate (60 / 12 = 5))
-#define RPM_BUFFER    24  // averaging buffer depth 
+// choose a reasonable size for the averaging buffer (this one also makes the rpm-multiplier easy to calculate (60 / 6 = 10))
+#define RPM_BUFFER    6  // averaging buffer depth 
 
-#define RPM_SCALE     5  // ((RPM_HZ / RPM_PPR) * (60 / RPM_BUFFER))
+#define RPM_SCALE     10  // ((RPM_HZ / RPM_PPR) * (60 / RPM_BUFFER))
 #define RPM_TICKS     (15625 / RPM_HZ)            // timer ticks
 //-----------------------------------------------------------
 
@@ -159,6 +176,10 @@ enum SequencerState_t {
   PULSE,
   PAUSE
 };
+
+volatile byte esc_state = ESC_NC;
+volatile byte _esc_state = ESC_NC;
+volatile char esc_ticks = 0;
 
 volatile bool ui_update = true;
 
@@ -205,9 +226,12 @@ volatile char message[MSG_LEN] = "";
 char mbuffer[MSG_LEN] = "";
 volatile bool msg_changed = true;
 
-char cbuf[64];
+volatile uint8_t msg_flt = 255;
+volatile uint8_t msg_lim = 255;
 
-double consKp=1.0, consKi=15.0, consKd=5.0;
+char cbuf[64], fbuf[ 16];
+
+double consKp=0.1, consKi=0.2, consKd=0.1;
 double Setpoint, Input, Output;
 PID myPID(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
 
@@ -222,7 +246,7 @@ void setup( void) {
   TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
   TFTscreen.stroke( ST7735_WHITE);
   TFTscreen.fill( ST7735_BLACK);
-
+/*
   TFTscreen.setTextSize(3);
   TFTscreen.setCursor( 40, 30);
   TFTscreen.print( "gCtrl");
@@ -230,7 +254,7 @@ void setup( void) {
   sprintf( cbuf, "%s", VERSION);
   TFTscreen.setCursor( 70, 70);
   TFTscreen.print( cbuf);
-  
+*/  
   for( uint8_t i=0; i < RPM_BUFFER; i++) {
     _rpm_avg[ i] = 0;
   }
@@ -247,6 +271,9 @@ void setup( void) {
   
   DIR_RPM_SENSE &= ~(1<< PIN_RPM_SENSE);
   PORT_RPM_SENSE |= (1<< PIN_RPM_SENSE);  // enable pullup for input
+
+  DIR_ESC_PWR_SENSE &= ~(1<< PIN_ESC_PWR_SENSE);
+//  PORT_ESC_PWR_SENSE &= ~(1<< PIN_ESC_PWR_SENSE);  // enable pullup for input
   
   DIR_BACKLIGHT |= (1<< PIN_BACKLIGHT);
   PORT_BACKLIGHT &= ~(1<< PIN_BACKLIGHT);  // enable pullup for input
@@ -276,6 +303,9 @@ void setup( void) {
   EICRA = ((0<< ISC31) | (1<< ISC30) | (0<< ISC21) | (1<< ISC20)) | ( EICRA & 0x0f);
   EICRB = (0<< ISC61) | (1<< ISC60);
   EIMSK |= (1<< INT6) | (1<< INT3) | (1<< INT2);
+  
+  PCMSK0 |= (1<< PCINT4);  // enable PCINT4 on PB4
+  PCICR |= (1<< PCIE0);   // enable pin change interrupts
   
   //----------------------------------------------------------------------------
   // setup time/counters
@@ -344,7 +374,7 @@ void setup( void) {
   Wire.begin( 0x5c);            // join i2c bus with address $5c for SpeedControl
   Wire.onReceive(receiveEvent); // register event
   Wire.onRequest(requestEvent); // register event
-
+/*
   // give esc a change to check adapt to our signal, skip esc setup mode
   TFTscreen.setTextSize(1);
   
@@ -368,11 +398,13 @@ void setup( void) {
   }
 
   TFTscreen.background( ST7735_BLACK);
-  
-  Setpoint = 0;
-  myPID.SetOutputLimits(0, 2000);
+*/  
+  Setpoint = (double) _rpm_value;
+  myPID.SetOutputLimits( 0, 2000);
 //  myPID.SetSampleTime( 160);
   myPID.SetMode(AUTOMATIC);
+
+  esc_state = ( PINB_ESC_PWR_SENSE & (1<< PIN_ESC_PWR_SENSE)) ? ESC_AUTO : ESC_NC;
   
 //  Serial.begin(115200);
   
@@ -391,23 +423,24 @@ void loop( void) {
   uint16_t tock = 0;
 
   while( true) {
-    setLED( ( tock & 0x01) ? 0x3ff : (_rpm_pwm >> 1), _motor_manual, _motor_manual);
+//    setLED( ( tock & 0x01) ? 0x3ff : (_rpm_pwm >> 1), _motor_manual, _motor_manual);
 
     updateSMode( ui_update);
     updateRpm( ui_update);
+    updateEscMode( ui_update);
     updateCoolant( ui_update);
     updateTooling( ui_update);
     if ( msg_changed) updateMessage();
 
     // do busy waiting, using arduino delay/millis etc will block timer1
     // tock frquency is 6Hz
-    if ( sys_ticks >= 8) {
+    if ( sys_ticks >= 4) {
       sys_ticks = 0;
 //      Serial.print( _rpm_current);
 //      Serial.println( "rpm");
     }
 
-    while( sys_ticks < 8 && !ui_update) {
+    while( sys_ticks < 4 && !ui_update) {
       sleep_cpu();
     }
     ui_update = false;
@@ -438,7 +471,7 @@ void setupUI() {
   // spindleMode
   TFTscreen.setTextSize(4);
   TFTscreen.setCursor( 2, 2);
-  TFTscreen.print( "X");
+  TFTscreen.print( "-");
 
   // servo bar  
   TFTscreen.noFill();
@@ -461,8 +494,40 @@ void setupUI() {
   TFTscreen.setCursor( 142, 70);
   TFTscreen.print( "T");
 
+  // limits & faults
+  TFTscreen.setTextSize(1);
+  TFTscreen.setCursor( 88, 96);
+  TFTscreen.print( "FLT [------]");
+  TFTscreen.setCursor( 0, 96);
+  TFTscreen.print( "LIM [------]");
+  
+  updateFault( 0);
+  updateLimit( 0);
+
   // msgDisplay
-  TFTscreen.drawFastHLine( 0, 96, 160, ST7735_WHITE);
+  TFTscreen.drawFastHLine( 0, 104, 160, ST7735_WHITE);
+  
+  TFTscreen.setTextSize(2);
+  TFTscreen.setCursor( 0, 106);
+  TFTscreen.print( "gCtrl");
+  TFTscreen.setTextSize(1);
+  sprintf( cbuf, "%s", VERSION);
+  TFTscreen.setCursor( 100, 120);
+  TFTscreen.print( cbuf);
+}
+
+void updateEscMode( bool force) {
+  if ( force || (esc_state != _esc_state)) {
+    TFTscreen.setTextSize(1);
+    TFTscreen.setCursor( 0, 48);
+    switch( esc_state) {
+      case ESC_NC: TFTscreen.print( "---"); break;
+      case ESC_SETUP_MIN: TFTscreen.print( "min"); break;
+      case ESC_SETUP_MAX: TFTscreen.print( "max"); break;
+      case ESC_AUTO: TFTscreen.print( "RPM"); break;
+    }
+    _esc_state = esc_state;
+  }
 }
 
 void updateSMode( bool force) {
@@ -476,7 +541,7 @@ void updateSMode( bool force) {
         case SPINDLE_CW: TFTscreen.print( "r"); break;
         case SPINDLE_CCW: TFTscreen.print( "l"); break;
         case SPINDLE_OFF:
-        default: TFTscreen.print( "m"); break;
+        default: TFTscreen.print( "M"); break;
       }
     } else {
       switch( _sMode) {
@@ -577,37 +642,71 @@ void updateTooling( bool force) {
   }
 }
 
-void updateMessage() {
-  uint8_t i=0;
-  uint8_t j=0;
-  uint8_t l=1;
+void bitString( uint8_t bm) {
+  char axs[7] = "XYZUVW";
+  uint8_t i, bt = 0x01;
   
+  for( i=0; i < 6; i++) {
+    fbuf[ i] = ( bm & bt) ? axs[ i] : '-';
+    bt <<= 1;
+  }
+  cbuf[i] = '\0';
+}
+
+void updateFault( uint8_t n) {
+  if ( n != msg_flt) {
+    TFTscreen.setTextColor( ST7735_GREEN, ST7735_BLACK);
+    TFTscreen.setTextSize(1);
+    TFTscreen.setCursor( 118, 96);
+    bitString( n);
+    TFTscreen.print( fbuf);
+    msg_flt = n;
+  }
+}
+
+void updateLimit( uint8_t n) {
+  if ( n != msg_lim) {
+    TFTscreen.setTextColor( ST7735_GREEN, ST7735_BLACK);
+    TFTscreen.setTextSize(1);
+    TFTscreen.setCursor( 30, 96);
+    bitString( n);
+    TFTscreen.print( fbuf);
+    msg_lim = n;
+  }
+}
+
+void updateMessage() {
+  uint8_t i = 0;
+  uint8_t j = 0;
+  uint8_t ln = 106;
+  
+  TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
   TFTscreen.setTextSize(1);
-  String line[2];
+  String line;
     
   while(( j < MSG_MAX) && ( i < MSG_LEN)) {
-    if ( message[i] == 0) break;
-    
-    line[l] += message[i];
-    i++;
 
     switch( message[i]) {
+      case 0:
       case 10:
       case 13:
-        line[l].toCharArray( cbuf, 40);
-        TFTscreen.setCursor( 0, 98+8*l);
-        TFTscreen.print( cbuf);
-        l++;
+        if ( line.length()) {
+          line.toCharArray( cbuf, 40);
+          TFTscreen.setCursor( 0, ln);
+          TFTscreen.print( cbuf);
+          ln += 8;
+          line = "";
+        }
+        if ( message[i] == 0) j = MSG_MAX;
+        i++;
       break;
     
       default:
         j++;
+        line += message[i++];
     }
   }
 
-  line[l].toCharArray( cbuf, 40);
-  TFTscreen.setCursor( 0, 198+8*l);
-  TFTscreen.print( cbuf);
   msg_changed = false;  
 }
 
@@ -636,7 +735,7 @@ void receiveEvent( int howMany) {
       else if ( rpm < RPM_OFF) _rpm_value = RPM_OFF;
       else _rpm_value = rpm;
       
-      if ( _sMode != SPINDLE_OFF) Setpoint = (double) _rpm_value;
+      Setpoint = (double) _rpm_value;
     } else {
       uint8_t par = c & 0x0f;
       switch( c & 0x70) {
@@ -645,11 +744,16 @@ void receiveEvent( int howMany) {
           switch( par) {
             // spindle control M3/4/5
             case CMD_M3:
-            case CMD_M4: _sMode = par; Setpoint = _rpm_value;
+            case CMD_M4:
+              _sMode = par;
+//              Setpoint = (double) _rpm_value;
+
               PORT_LED_TX &= !(1<< PIN_LED_TX);
               _motor_manual = false;
             break;
-            case CMD_M5: _sMode = par; Setpoint = 0;
+            case CMD_M5: 
+              _sMode = par; 
+//              Setpoint = 0;
               PORT_LED_TX |= (1<< PIN_LED_TX);
             break;
             
@@ -677,15 +781,26 @@ void receiveEvent( int howMany) {
         
         // send message command
         case CMD_MSG:
-        default:
-          byte msgidx = 0;
-          while( howMany-- > 0 && msgidx < 31) {
-            c = Wire.read();
-            message[ msgidx] = c;
-            msgidx++;
-          }
-          message[ msgidx] = 0;
-          msg_changed = true;
+          switch( par) {
+            case CMD_MSG_LIM:
+                howMany--;
+                updateLimit( Wire.read());
+            break;
+            
+            case CMD_MSG_FLT:
+                howMany--;
+                updateFault( !Wire.read());
+            break;
+            
+            case CMD_MSG_TXT:
+              byte msgidx = 0;
+              while( howMany-- > 0 && msgidx < 31) {
+                c = Wire.read();
+                message[ msgidx++] = c;
+              }
+              message[ msgidx] = 0;
+              msg_changed = true;
+        }
       }
     }
   }
@@ -715,9 +830,24 @@ byte encoder( byte input) {
 }
 
 //----------------------------------------------------------------------------
-// interrupt handlers for buttons
+// interrupt handler for esc pwr sense
 
+ISR( PCINT0_vect) {
+  byte pwr_sense = PINB_ESC_PWR_SENSE & (1<< PIN_ESC_PWR_SENSE);
+  
+  if ( pwr_sense) {
+    esc_ticks = 0;
+    esc_state = ESC_SETUP_MIN;
+  } else {
+    esc_state = ESC_NC;
+  } 
+  ui_update = true;
+}
+  
+//----------------------------------------------------------------------------
+// interrupt handlers for buttons
 // level change interrupt on 
+
 ISR( INT2_vect) {
   turnDecode();
 }
@@ -756,6 +886,7 @@ void turnDecode() {
         case UP:
           if ( _rpm_value > RPM_PWM_SCALE) _rpm_value -= RPM_PWM_SCALE;
           else _rpm_value = RPM_OFF;
+          Setpoint = (double) _rpm_value;
   
           ui_update = true;
         break;
@@ -763,6 +894,7 @@ void turnDecode() {
         case DOWN:
           _rpm_value += RPM_PWM_SCALE;
           if ( _rpm_value > RPM_MAX) _rpm_value = RPM_MAX;
+          Setpoint = (double) _rpm_value;
   
           ui_update = true;
         break;
@@ -802,6 +934,8 @@ ISR( TIMER0_OVF) {
   
 // rpm measurement gate clock
 ISR(TIMER3_COMPA_vect) {
+  setLED( ( sys_ticks & 0x01) ? 0x3ff : (_rpm_pwm >> 1), _motor_manual, _motor_manual);
+  
   sys_ticks++;
   
   uint16_t rotations = (uint16_t) TCNT0;
@@ -819,9 +953,36 @@ ISR(TIMER3_COMPA_vect) {
   
   if ( _rpm_current != last_rpm) ui_update = true;
 
-  Input = (double) _rpm_current;
-  myPID.Compute();
-  _rpm_pwm = (_motor_manual ^ (_sMode != SPINDLE_OFF)) ? 0 : (int) Output;
+  switch( esc_state) {
+    case ESC_SETUP_MIN:
+      if ( ++esc_ticks >= ESC_TICKS_MIN) {
+        esc_ticks = 0;
+        esc_state = ESC_SETUP_MAX;
+        _rpm_pwm = PWM_MAX;
+        ui_update = true;
+      }
+    break;
+    case ESC_SETUP_MAX:
+      if ( ++esc_ticks >= ESC_TICKS_MAX) {
+        esc_ticks = 0;
+        esc_state = ESC_AUTO;
+        ui_update = true;
+      } else break;
+
+    case ESC_AUTO:
+      if (_motor_manual ^ (_sMode != SPINDLE_OFF)) {
+        Input = (double) _rpm_current;
+        myPID.Compute();
+        _rpm_pwm = (int) Output;
+      } else {
+        _rpm_pwm = PWM_OFF;
+      }
+    break;
+    case ESC_NC:
+    default:
+      _rpm_pwm = PWM_OFF;
+      ui_update = true;
+  }
 }
 
 //----------------------------------------------------------------------------
