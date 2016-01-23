@@ -41,7 +41,7 @@
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "2.2b"
+#define VERSION  "2.2A"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -224,10 +224,10 @@ uint8_t d_tool_current = 0;
 
 volatile char message[MSG_LEN] = "";
 char mbuffer[MSG_LEN] = "";
-volatile bool msg_changed = true;
+volatile bool msg_changed = false;
 
-volatile uint8_t msg_flt = 255;
-volatile uint8_t msg_lim = 255;
+volatile uint8_t msg_flt = 0;
+volatile uint8_t msg_lim = 0;
 
 char cbuf[64], fbuf[ 16];
 
@@ -496,16 +496,16 @@ void setupUI() {
 
   // limits & faults
   TFTscreen.setTextSize(1);
-  TFTscreen.setCursor( 88, 96);
+  TFTscreen.setCursor( 88, 95);
   TFTscreen.print( "FLT [------]");
-  TFTscreen.setCursor( 0, 96);
-  TFTscreen.print( "LIM [------]");
+  TFTscreen.setCursor( 0, 95);
+  TFTscreen.print( "[------] LIM");
   
   updateFault( 0);
   updateLimit( 0);
 
   // msgDisplay
-  TFTscreen.drawFastHLine( 0, 104, 160, ST7735_WHITE);
+  TFTscreen.drawFastHLine( 0, 103, 160, ST7735_WHITE);
   
   TFTscreen.setTextSize(2);
   TFTscreen.setCursor( 0, 106);
@@ -642,35 +642,38 @@ void updateTooling( bool force) {
   }
 }
 
-void bitString( uint8_t bm) {
+void bitString( uint8_t x, uint8_t bm) {
   char axs[7] = "XYZUVW";
+  char text[2] = "@";
   uint8_t i, bt = 0x01;
+
+  TFTscreen.setTextSize(1);
   
   for( i=0; i < 6; i++) {
-    fbuf[ i] = ( bm & bt) ? axs[ i] : '-';
+    TFTscreen.setCursor( x, 95);
+    if ( bm & bt) {
+      TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
+      text[ 0] = '-';
+    } else {
+      TFTscreen.setTextColor( ST7735_BLACK, ST7735_BLUE);
+      text[ 0] = axs[ i];
+    }
+    TFTscreen.print( text);
     bt <<= 1;
+    x += 6;
   }
-  cbuf[i] = '\0';
 }
 
 void updateFault( uint8_t n) {
   if ( n != msg_flt) {
-    TFTscreen.setTextColor( ST7735_GREEN, ST7735_BLACK);
-    TFTscreen.setTextSize(1);
-    TFTscreen.setCursor( 118, 96);
-    bitString( n);
-    TFTscreen.print( fbuf);
+    bitString( 118, n);
     msg_flt = n;
   }
 }
 
 void updateLimit( uint8_t n) {
   if ( n != msg_lim) {
-    TFTscreen.setTextColor( ST7735_GREEN, ST7735_BLACK);
-    TFTscreen.setTextSize(1);
-    TFTscreen.setCursor( 30, 96);
-    bitString( n);
-    TFTscreen.print( fbuf);
+    bitString( 5, n);
     msg_lim = n;
   }
 }
@@ -679,6 +682,10 @@ void updateMessage() {
   uint8_t i = 0;
   uint8_t j = 0;
   uint8_t ln = 106;
+  
+//  TFTscreen.noStroke();
+  TFTscreen.fill( ST7735_BLACK);
+  TFTscreen.rect( 0, 106, 159, 119);
   
   TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
   TFTscreen.setTextSize(1);
@@ -789,7 +796,7 @@ void receiveEvent( int howMany) {
             
             case CMD_MSG_FLT:
                 howMany--;
-                updateFault( !Wire.read());
+                updateFault( Wire.read());
             break;
             
             case CMD_MSG_TXT:
