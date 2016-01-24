@@ -41,7 +41,7 @@
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "2.2A"
+#define VERSION  "2.2C"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -109,8 +109,8 @@
 #define UP 1
 #define DOWN 2
 
-#define MSG_LEN 45
-#define MSG_MAX 42
+#define MSG_LEN 100
+#define MSG_MAX 100
 
 // defined commands using upper nibble
 #define CMD_MX  0x00
@@ -226,8 +226,8 @@ volatile char message[MSG_LEN] = "";
 char mbuffer[MSG_LEN] = "";
 volatile bool msg_changed = false;
 
-volatile uint8_t msg_flt = 0;
-volatile uint8_t msg_lim = 0;
+volatile uint8_t msg_flt = 0, _msg_flt = 0;
+volatile uint8_t msg_lim = 0, _msg_lim = 0;
 
 char cbuf[64], fbuf[ 16];
 
@@ -430,6 +430,8 @@ void loop( void) {
     updateEscMode( ui_update);
     updateCoolant( ui_update);
     updateTooling( ui_update);
+    updateFault( ui_update);
+    updateLimit( ui_update);
     if ( msg_changed) updateMessage();
 
     // do busy waiting, using arduino delay/millis etc will block timer1
@@ -501,8 +503,8 @@ void setupUI() {
   TFTscreen.setCursor( 0, 95);
   TFTscreen.print( "[------] LIM");
   
-  updateFault( 0);
-  updateLimit( 0);
+  updateFault( true);
+  updateLimit( true);
 
   // msgDisplay
   TFTscreen.drawFastHLine( 0, 103, 160, ST7735_WHITE);
@@ -518,6 +520,7 @@ void setupUI() {
 
 void updateEscMode( bool force) {
   if ( force || (esc_state != _esc_state)) {
+    TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
     TFTscreen.setTextSize(1);
     TFTscreen.setCursor( 0, 48);
     switch( esc_state) {
@@ -534,6 +537,7 @@ void updateSMode( bool force) {
   if ( _sMode != d_sMode || d_motor_manual != _motor_manual || force) {
 //    TFTscreen.fill( 0,0,0);
 //    TFTscreen.rect( 0,16,18,24);
+    TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
     TFTscreen.setTextSize(4);
     TFTscreen.setCursor( 2, 2);
     if ( _motor_manual) {
@@ -567,7 +571,6 @@ void updateRpm( bool force) {
       TFTscreen.fill( ST7735_BLACK);
       TFTscreen.rect( bar+4, 36, 153-bar, 6);
     }
-    TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
   }
 
   if ( d_rpm_value != _rpm_value || force) {  
@@ -575,6 +578,7 @@ void updateRpm( bool force) {
     else sprintf( cbuf, "-off-");
 //    TFTscreen.fill( 0,0,0);
 //    TFTscreen.rect( 0,0,30,8);
+    TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
     TFTscreen.setTextSize(2);
     TFTscreen.setCursor(40, 48);
     TFTscreen.print( cbuf);
@@ -605,6 +609,7 @@ void updateRpm( bool force) {
 
 void updateCoolant( bool force) {
   if ( coolant != d_coolant || force) {
+    TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
     switch( coolant) {
       case COOLANT_BOTH: sprintf( cbuf, "[MST/FLD]"); break;
       case COOLANT_FLOOD: sprintf( cbuf, "[---/FLD]"); break;
@@ -622,6 +627,7 @@ void updateCoolant( bool force) {
 }
 
 void updateTooling( bool force) {
+  TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
   if ( tool_index != d_tool_index || force) {
 //    TFTscreen.fill( 0,0,0);
 //    TFTscreen.rect( 120,60,6,8);
@@ -664,23 +670,22 @@ void bitString( uint8_t x, uint8_t bm) {
   }
 }
 
-void updateFault( uint8_t n) {
-  if ( n != msg_flt) {
-    bitString( 118, n);
-    msg_flt = n;
+void updateFault( bool force) {
+  if ( _msg_flt != msg_flt || force) {
+    bitString( 118, _msg_flt);
+    msg_flt = _msg_flt;
   }
 }
 
-void updateLimit( uint8_t n) {
-  if ( n != msg_lim) {
-    bitString( 5, n);
-    msg_lim = n;
+void updateLimit( bool force) {
+  if ( _msg_lim != msg_lim || force) {
+    bitString( 5, _msg_lim);
+    msg_lim = _msg_lim;
   }
 }
 
 void updateMessage() {
   uint8_t i = 0;
-  uint8_t j = 0;
   uint8_t ln = 106;
   
 //  TFTscreen.noStroke();
@@ -691,7 +696,7 @@ void updateMessage() {
   TFTscreen.setTextSize(1);
   String line;
     
-  while(( j < MSG_MAX) && ( i < MSG_LEN)) {
+  while( i < MSG_MAX) {
 
     switch( message[i]) {
       case 0:
@@ -704,14 +709,13 @@ void updateMessage() {
           ln += 8;
           line = "";
         }
-        if ( message[i] == 0) j = MSG_MAX;
-        i++;
+        if ( message[i] == 0) i = MSG_MAX;
       break;
     
       default:
-        j++;
-        line += message[i++];
+        line += message[ i];
     }
+    i++;
   }
 
   msg_changed = false;  
@@ -790,20 +794,25 @@ void receiveEvent( int howMany) {
         case CMD_MSG:
           switch( par) {
             case CMD_MSG_LIM:
-                howMany--;
-                updateLimit( Wire.read());
+                if ( howMany > 0) {
+                  _msg_lim = Wire.read();
+                  howMany--;
+                }
             break;
             
             case CMD_MSG_FLT:
-                howMany--;
-                updateFault( Wire.read());
+                if ( howMany > 0) {
+                  _msg_flt = Wire.read();
+                  howMany--;
+                }
             break;
             
             case CMD_MSG_TXT:
               byte msgidx = 0;
-              while( howMany-- > 0 && msgidx < 31) {
+              while( howMany > 0 && msgidx < MSG_MAX) {
                 c = Wire.read();
                 message[ msgidx++] = c;
+                howMany--;
               }
               message[ msgidx] = 0;
               msg_changed = true;
