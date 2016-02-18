@@ -41,7 +41,7 @@
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "2.3A"
+#define VERSION  "2.3C"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -231,7 +231,7 @@ volatile uint8_t msg_lim = 0, _msg_lim = 0;
 
 char cbuf[64], fbuf[ 16];
 
-double consKp=0.1, consKi=0.2, consKd=0.1;
+double consKp=0.4, consKi=0.25, consKd=0.05;
 double Setpoint, Input, Output;
 PID myPID(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
 
@@ -502,9 +502,6 @@ void setupUI() {
   TFTscreen.print( "FLT [------]");
   TFTscreen.setCursor( 0, 95);
   TFTscreen.print( "[------] LIM");
-  
-  updateFault( true);
-  updateLimit( true);
 
   // msgDisplay
   TFTscreen.drawFastHLine( 0, 103, 160, ST7735_WHITE);
@@ -516,6 +513,9 @@ void setupUI() {
   sprintf( cbuf, "%s", VERSION);
   TFTscreen.setCursor( 100, 120);
   TFTscreen.print( cbuf);
+  
+  updateFault( true);
+  updateLimit( true);
 }
 
 void updateEscMode( bool force) {
