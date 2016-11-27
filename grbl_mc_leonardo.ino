@@ -5,7 +5,7 @@
   - PID controlled rpm
   - controlled via i2c
   - connects to a rotary encoder/switch for speed/manual stop
-  - outputs a servo signal (1-2ms, 50Hz) for esc control
+  - outputs a pwm signal (100Hz, 4-96% duty cycle) for spindle control
   - some spare pins
   - displays on a 160x128 SPI TFT with ST7735S controller
   - shows spindle on/off via TX led
@@ -29,6 +29,8 @@
 
 #include <Wire.h>
 
+#include <EEPROM.h>
+
 #include <TFT.h>  // Arduino LCD library
 #include <SPI.h>
 
@@ -41,7 +43,7 @@
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "2.3C"
+#define VERSION  "3.0c"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -50,9 +52,9 @@
 #define SDA 0
 #define SCL 2
 
-#define DIR_SERVO  DDRC
-#define PORT_SERVO PORTC
-#define PIN_SERVO  PC6
+#define DIR_SPINDLE_PWM  DDRC
+#define PORT_SPINDLE_PWM PORTC
+#define PIN_SPINDLE_PWM  PC6
 
 #define DIR_LED_RX    DDRB
 #define PORT_LED_RX   PORTB
@@ -95,12 +97,14 @@
 
 #define DEBOUNCE_TICKS 2
 
-#define SERVO_PULSE_1MS 2000      // 1ms
-#define SERVO_PULSE_19MS 38000   // 1ms
+// the timer is set to 16MHz / 256 = 62.500 Hz
+// setting freq to 625clks @ 100Hz
+#define SPINDLE_PWM_MIN_ON 25      // 1ms
+#define SPINDLE_PWM_MIN_OFF 600   // 1ms
 
-#define PWM_OFF 0
-#define PWM_SLOW 50
-#define PWM_MAX 2000
+#define SPINDLE_PWM_OFF 0        // 4%
+#define SPINDLE_PWM_SLOW 6
+#define SPINDLE_PWM_MAX 575      // 96%
 
 #define BLINK_TICKS_MANUAL 5
 #define BLINK_TICKS_MASTER 1
@@ -156,7 +160,7 @@
 #define RPM_PWM_SCALE 25    //((RPM_MAX - RPM_OFF) / 120)
 
 #define RPM_MAXHZ     (RPM_MAX / 60)  // 250
-#define RPM_PPR       8  // pulses per rotation
+#define RPM_PPR       20  // 8 pulses per rotation
 
 // calculate gate frequency
 // RPM_MAXHZ * RPM_PPR = 250 * 8 = 2000 pulses per second
@@ -168,7 +172,7 @@
 // choose a reasonable size for the averaging buffer (this one also makes the rpm-multiplier easy to calculate (60 / 6 = 10))
 #define RPM_BUFFER    6  // averaging buffer depth 
 
-#define RPM_SCALE     10  // ((RPM_HZ / RPM_PPR) * (60 / RPM_BUFFER))
+#define RPM_SCALE     5  //(((RPM_HZ / RPM_PPR) * (60 / RPM_BUFFER)))
 #define RPM_TICKS     (15625 / RPM_HZ)            // timer ticks
 //-----------------------------------------------------------
 
@@ -198,7 +202,7 @@ volatile uint16_t _rpm_avg[RPM_BUFFER];
 volatile uint8_t _rpm_avg_idx = 0;
 volatile uint16_t _rpm_avg_sum = 0;
 
-volatile int _rpm_pwm = PWM_OFF;
+volatile int _rpm_pwm = SPINDLE_PWM_OFF;
 volatile int d_rpm_pwm = -1;
 
 volatile boolean _motor_manual = false;
@@ -231,13 +235,50 @@ volatile uint8_t msg_lim = 0, _msg_lim = 0;
 
 char cbuf[64], fbuf[ 16];
 
-double consKp=0.4, consKi=0.25, consKd=0.05;
+#define EEP_SETTINGS_ADDR  0
+
+struct pidParms {
+  double consKp, consKi, consKd;
+};
+
+struct Settings {
+  pidParms settings;
+  long crc;
+};
+
+Settings settings; 
+long setCrc;
+
+// double consKp=0.4, consKi=0.25, consKd=0.05;
 double Setpoint, Input, Output;
-PID myPID(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
+PID *myPID;  //(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
 
 TFT TFTscreen = TFT( DP_CS, DP_DC, DP_RST);
 
 void setup( void) {
+/*  
+  Serial.begin(9600);
+  
+  Serial.print("grbl_mc ");
+  Serial.println( VERSION);
+*/  
+  eeprom_get( EEP_SETTINGS_ADDR, (uint8_t*) &settings, sizeof( Settings));
+  
+  setCrc = eeprom_crc( (uint8_t*) &settings.settings, sizeof( pidParms));
+
+  if ( setCrc != settings.crc) {
+    settings.settings.consKp = 0.4;
+    settings.settings.consKi = 0.25;
+    settings.settings.consKd = 0.05;
+    settings.crc = eeprom_crc( (uint8_t*) &settings.settings, sizeof( pidParms));
+    
+    eeprom_put( EEP_SETTINGS_ADDR, (uint8_t*) &settings, sizeof( Settings));
+//    EEPROM.put( EEP_SETTINGS_ADDR, &settings);
+    
+    Serial.println( "parms preset");
+  } else Serial.println( "parms read");
+  
+  myPID = new PID(&Input, &Output, &Setpoint, settings.settings.consKp, settings.settings.consKi, settings.settings.consKd, DIRECT);
   
   TFTscreen.begin();
   TFTscreen.setRotation( 3);
@@ -279,8 +320,8 @@ void setup( void) {
   PORT_BACKLIGHT &= ~(1<< PIN_BACKLIGHT);  // enable pullup for input
 
   // outputs
-  DIR_SERVO |= (1<< PIN_SERVO);      // set PE6 as output
-  PORT_SERVO &= ~(1<< PIN_SERVO);    // preset to 0
+  DIR_SPINDLE_PWM |= (1<< PIN_SPINDLE_PWM);      // set PE6 as output
+  PORT_SPINDLE_PWM &= ~(1<< PIN_SPINDLE_PWM);    // preset to 0
 
 //  PORT_LED_TX &= ~(1<< PIN_LED_TX);    // preset to 0
   DIR_LED_L |= (1<< PIN_LED_L);
@@ -334,14 +375,14 @@ void setup( void) {
   TIMSK3 = 0x02;  //(0<< ICIE3) | (0<< OCIE3C) | (0<< OCIE3B) | (1<< OCIE3A) | (0<< TOIE3);
 
   // setup timer for pulse generation
-  // disconnect pins, 8x prescaler, ctc mode, interrupt on ocra match
+  // disconnect pins, 256x prescaler, ctc mode, interrupt on ocra match
   TCCR1A = 0x00;  //(0<< COM1A1) | (0<< COM1A0) | (0<<COM1B1) | (0<< COM1B0) | (0<<COM1C1) | (0<< COM1C0) | ( 0<< WGM11) | (0<< WGM10);
-  TCCR1B = 0x0a;  //(0<< ICNC1) | (0<< ICES1) | (0<< WGM13) | (1<< WGM12) | (0<< CS12) | ( 1<< CS11) | (0<< CS10);
+  TCCR1B = 0x0c;  //(0<< ICNC1) | (0<< ICES1) | (0<< WGM13) | (1<< WGM12) | (1<< CS12) | ( 0<< CS11) | (0<< CS10);
   TCCR1C = 0x00;  //(0<< FOC1A) | (0<< FOC1B) | (0<< FOC1C);
   TCNT1 = 0;
-  OCR1A = 2000;   // set for 2000ticks/ms
+  OCR1A = SPINDLE_PWM_MIN_ON;   // set for 2000ticks/ms
   OCR1B = 0;    // not used
-  OCR1C = 0;  // 16Mhz / 8 / 20Hz 
+  OCR1C = 0;  // 16Mhz / 1024 / 20Hz 
   TIMSK1 = 0x02;  //(0<< ICIE1) | (0<< OCIE1C) | (0<< OCIE1B) | (1<< OCIE1A) | (0<< TOIE1);
 
   // Init the internal PLL
@@ -389,7 +430,7 @@ void setup( void) {
   }
 
   // output servo-max for 1s, this make the esc skip setup
-  _rpm_pwm = PWM_MAX;
+  _rpm_pwm = SPINDLE_PWM_MAX;
   TFTscreen.print( "[max]");
 
   sys_ticks = 0;
@@ -400,16 +441,11 @@ void setup( void) {
   TFTscreen.background( ST7735_BLACK);
 */  
   Setpoint = (double) _rpm_value;
-  myPID.SetOutputLimits( 0, 2000);
+  myPID->SetOutputLimits( 0, SPINDLE_PWM_MAX);
 //  myPID.SetSampleTime( 160);
-  myPID.SetMode(AUTOMATIC);
+  myPID->SetMode(AUTOMATIC);
 
   esc_state = ( PINB_ESC_PWR_SENSE & (1<< PIN_ESC_PWR_SENSE)) ? ESC_AUTO : ESC_NC;
-  
-//  Serial.begin(115200);
-  
-//  Serial.print("grbl_mc ");
-//  Serial.println( VERSION);
 }
 
 void loop( void) { 
@@ -419,7 +455,7 @@ void loop( void) {
   sleep_enable();
   
   // now loop
-  _rpm_pwm = PWM_OFF;
+  _rpm_pwm = SPINDLE_PWM_OFF;
   uint16_t tock = 0;
 
   while( true) {
@@ -450,6 +486,69 @@ void loop( void) {
     
 //    TOGGLE_LED_L |= (1<< PIN_LED_L);
   }
+}
+
+void dumpSerial() {
+  Serial.print("grbl_mc ");
+  Serial.println( VERSION);
+  
+  Serial.print( "parms crc [");
+  Serial.print( setCrc);
+  Serial.print( "_");
+  Serial.print( settings.crc);
+  Serial.println( "]");
+  
+  Serial.print( "parms [");
+  Serial.print( settings.settings.consKp);
+  Serial.print( "_");
+  Serial.print( settings.settings.consKi);
+  Serial.print( "_");
+  Serial.print( settings.settings.consKd);
+  Serial.println( "]");
+}
+  
+//----------------------------------------------------------------------------
+// eeprom
+
+int eeprom_get( int ptr, uint8_t* data, int len) {
+  int i;
+  for( i=0; i < len; i++) {
+    *data = EEPROM.read( ptr);
+    ptr++;
+    data++;
+  }
+  
+  return i;
+}
+  
+int eeprom_put( int ptr, uint8_t* data, int len) {
+  int i;
+  for( i=0; i < len; i++) {
+    EEPROM.write( ptr, *data);
+    ptr++;
+    data++;
+  }
+  
+  return i;
+}
+  
+unsigned long eeprom_crc( uint8_t* data, int len) {
+
+  const unsigned long crc_table[16] = {
+    0x00000000, 0x1db71064, 0x3b6e20c8, 0x26d930ac,
+    0x76dc4190, 0x6b6b51f4, 0x4db26158, 0x5005713c,
+    0xedb88320, 0xf00f9344, 0xd6d6a3e8, 0xcb61b38c,
+    0x9b64c2b0, 0x86d3d2d4, 0xa00ae278, 0xbdbdf21c
+  };
+
+  unsigned long crc = ~0L;
+
+  for (int index = 0; index < len; ++index) {
+    crc = crc_table[(crc ^ data[index]) & 0x0f] ^ (crc >> 4);
+    crc = crc_table[(crc ^ (data[index] >> 4)) & 0x0f] ^ (crc >> 4);
+    crc = ~crc;
+  }
+  return crc;
 }
 
 //----------------------------------------------------------------------------
@@ -511,8 +610,15 @@ void setupUI() {
   TFTscreen.print( "gCtrl");
   TFTscreen.setTextSize(1);
   sprintf( cbuf, "%s", VERSION);
-  TFTscreen.setCursor( 100, 120);
+  TFTscreen.setCursor( 130, 120);
   TFTscreen.print( cbuf);
+  
+  TFTscreen.setCursor( 0, 120);
+  TFTscreen.print( setCrc, HEX);
+  TFTscreen.print( "-");
+  TFTscreen.print( settings.crc, HEX);
+  TFTscreen.print( "-");
+  TFTscreen.print( sizeof(pidParms), HEX);
   
   updateFault( true);
   updateLimit( true);
@@ -563,7 +669,7 @@ void updateSMode( bool force) {
 void updateRpm( bool force) {
   if ( d_rpm_pwm != _rpm_pwm || force) {  
     d_rpm_pwm = _rpm_pwm;
-    int bar = max( 0, min( 154, round( _rpm_pwm / 13)));
+    int bar = max( 0, min( 154, round( _rpm_pwm / ( SPINDLE_PWM_MAX / 154))));
     TFTscreen.noStroke();
     TFTscreen.fill( ST7735_GREEN);
     TFTscreen.rect( 3, 36, bar, 6);
@@ -974,7 +1080,7 @@ ISR(TIMER3_COMPA_vect) {
       if ( ++esc_ticks >= ESC_TICKS_MIN) {
         esc_ticks = 0;
         esc_state = ESC_SETUP_MAX;
-        _rpm_pwm = PWM_MAX;
+        _rpm_pwm = SPINDLE_PWM_MAX;
         ui_update = true;
       }
     break;
@@ -988,15 +1094,15 @@ ISR(TIMER3_COMPA_vect) {
     case ESC_AUTO:
       if (_motor_manual ^ (_sMode != SPINDLE_OFF)) {
         Input = (double) _rpm_current;
-        myPID.Compute();
+        myPID->Compute();
         _rpm_pwm = (int) Output;
       } else {
-        _rpm_pwm = PWM_OFF;
+        _rpm_pwm = SPINDLE_PWM_OFF;
       }
     break;
     case ESC_NC:
     default:
-      _rpm_pwm = PWM_OFF;
+      _rpm_pwm = SPINDLE_PWM_OFF;
       ui_update = true;
   }
 }
@@ -1008,15 +1114,15 @@ ISR(TIMER3_COMPA_vect) {
 ISR(TIMER1_COMPA_vect) {
     switch( state_machine) {
       case PULSE:
-        OCR1A = SERVO_PULSE_1MS + _rpm_pwm;
-        PORT_SERVO |= (1 << PIN_SERVO);
+        OCR1A = SPINDLE_PWM_MIN_ON + _rpm_pwm;
+        PORT_SPINDLE_PWM |= (1 << PIN_SPINDLE_PWM);
         state_machine = PAUSE;
       break;
 
       case PAUSE:
       default:
-        OCR1A = SERVO_PULSE_19MS - _rpm_pwm;
-        PORT_SERVO &= ~( 1 << PIN_SERVO);
+        OCR1A = SPINDLE_PWM_MIN_OFF - _rpm_pwm;
+        PORT_SPINDLE_PWM &= ~( 1 << PIN_SPINDLE_PWM);
 
         state_machine = PULSE;  
     }
