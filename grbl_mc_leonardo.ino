@@ -43,7 +43,7 @@
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "3.0c"
+#define VERSION  "3.1a"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -52,6 +52,7 @@
 #define SDA 0
 #define SCL 2
 
+// switch to TMR3 PWM
 #define DIR_SPINDLE_PWM  DDRC
 #define PORT_SPINDLE_PWM PORTC
 #define PIN_SPINDLE_PWM  PC6
@@ -82,10 +83,13 @@
 #define PORT_MUTE   PORTE
 #define PIN_MUTE    PE6
 
-#define PINB_ESC_PWR_SENSE  PINB
-#define DIR_ESC_PWR_SENSE   DDRB
-#define PORT_ESC_PWR_SENSE  PORTB
-#define PIN_ESC_PWR_SENSE   PB4
+#define PINB_SPINDLE_CTRL  PINB
+#define DIR_SPINDLE_CTRL   DDRB
+#define PORT_SPINDLE_CTRL  PORTB
+
+#define PIN_SPINDLE_SENSE   PB4
+#define PIN_SPINDLE_DIR    PB5
+#define PIN_SPINDLE_EN    PB6
 
 #define DIR_RPM_SENSE   DDRD
 #define PORT_RPM_SENSE  PORTD
@@ -95,16 +99,23 @@
 #define PORT_BACKLIGHT  PORTD
 #define PIN_BACKLIGHT   PD6
 
+#define DIR_COOLANT_CTRL   DDRD
+#define PORT_COOLANT_CTRL  PORTD
+#define PIN_COOLANT_MIST   PD0
+#define PIN_COOLANT_FLOOD  PD1
+
 #define DEBOUNCE_TICKS 2
 
 // the timer is set to 16MHz / 256 = 62.500 Hz
 // setting freq to 625clks @ 100Hz
-#define SPINDLE_PWM_MIN_ON 25      // 1ms
-#define SPINDLE_PWM_MIN_OFF 600   // 1ms
+//#define SPINDLE_PWM_MIN_ON 25      // 1ms
+//#define SPINDLE_PWM_MIN_OFF 600   // 1ms
 
-#define SPINDLE_PWM_OFF 0        // 4%
-#define SPINDLE_PWM_SLOW 6
-#define SPINDLE_PWM_MAX 575      // 96%
+#define SPINDLE_PWM_PERIOD 1010   // 1ms
+
+#define SPINDLE_PWM_OFF 5        // 0.5%
+#define SPINDLE_PWM_SLOW 50
+#define SPINDLE_PWM_MAX 1000      // 99.5%
 
 #define BLINK_TICKS_MANUAL 5
 #define BLINK_TICKS_MASTER 1
@@ -256,12 +267,12 @@ PID *myPID;  //(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
 TFT TFTscreen = TFT( DP_CS, DP_DC, DP_RST);
 
 void setup( void) {
-/*  
+
   Serial.begin(9600);
   
   Serial.print("grbl_mc ");
   Serial.println( VERSION);
-*/  
+
   eeprom_get( EEP_SETTINGS_ADDR, (uint8_t*) &settings, sizeof( Settings));
   
   setCrc = eeprom_crc( (uint8_t*) &settings.settings, sizeof( pidParms));
@@ -313,15 +324,21 @@ void setup( void) {
   DIR_RPM_SENSE &= ~(1<< PIN_RPM_SENSE);
   PORT_RPM_SENSE |= (1<< PIN_RPM_SENSE);  // enable pullup for input
 
-  DIR_ESC_PWR_SENSE &= ~(1<< PIN_ESC_PWR_SENSE);
-//  PORT_ESC_PWR_SENSE &= ~(1<< PIN_ESC_PWR_SENSE);  // enable pullup for input
+  // outputs
+
+  DIR_SPINDLE_CTRL &= ~(1<< PIN_SPINDLE_SENSE);                    // IN: spindle sense
+  DIR_SPINDLE_CTRL |= (1<< PIN_SPINDLE_DIR | 1<< PIN_SPINDLE_EN);  // OUT: EN and DIR
+//  PORT_SPINDLE_CTRL &= ~(1<< PIN_SPINDLE_SENSE);  // enable pullup for input
   
   DIR_BACKLIGHT |= (1<< PIN_BACKLIGHT);
   PORT_BACKLIGHT &= ~(1<< PIN_BACKLIGHT);  // enable pullup for input
 
-  // outputs
+  DIR_COOLANT_CTRL |= ((1<< PIN_COOLANT_MIST) | (1<< PIN_COOLANT_FLOOD));
+  PORT_COOLANT_CTRL &= ~((1<< PIN_COOLANT_MIST) | (1<< PIN_COOLANT_FLOOD));  // enable pullup for input
+
+  // switch to PWM TMR3A, dir needs to be set "out"
   DIR_SPINDLE_PWM |= (1<< PIN_SPINDLE_PWM);      // set PE6 as output
-  PORT_SPINDLE_PWM &= ~(1<< PIN_SPINDLE_PWM);    // preset to 0
+//  PORT_SPINDLE_PWM &= ~(1<< PIN_SPINDLE_PWM);    // preset to 0
 
 //  PORT_LED_TX &= ~(1<< PIN_LED_TX);    // preset to 0
   DIR_LED_L |= (1<< PIN_LED_L);
@@ -363,27 +380,28 @@ void setup( void) {
   OCR0B = 0;    // not used
   TIMSK0 = 0x01;  //(0<< OCIE0B) | (0<< OCIE0A) | (0<< TOIE0);
 
-  // setup timer for rpm gate
+  // setup timer for rpm measuring gate
   // disconnect pins, 1024x prescaler, ctc mode, interrupt on ocra match
-  TCCR3A = 0x00;  //(0<< COM3A1) | (0<< COM3A0) | (0<<COM3B1) | (0<< COM3B0) | (0<<COM3C1) | (0<< COM3C0) | ( 0<< WGM31) | (0<< WGM30);
-  TCCR3B = 0x0d;  //(0<< ICNC3) | (0<< ICES3) | (0<< WGM33) | (1<< WGM32) | (1<< CS32) | ( 0<< CS31) | (1<< CS30);
-  TCCR3C = 0x00;  //(0<< FOC3A);
-  TCNT3 = 0;
-  OCR3A = RPM_TICKS;  //2604;   // set for 5Hz
-  OCR3B = 0;    // not used
-  OCR3C = 0;
-  TIMSK3 = 0x02;  //(0<< ICIE3) | (0<< OCIE3C) | (0<< OCIE3B) | (1<< OCIE3A) | (0<< TOIE3);
-
-  // setup timer for pulse generation
-  // disconnect pins, 256x prescaler, ctc mode, interrupt on ocra match
   TCCR1A = 0x00;  //(0<< COM1A1) | (0<< COM1A0) | (0<<COM1B1) | (0<< COM1B0) | (0<<COM1C1) | (0<< COM1C0) | ( 0<< WGM11) | (0<< WGM10);
-  TCCR1B = 0x0c;  //(0<< ICNC1) | (0<< ICES1) | (0<< WGM13) | (1<< WGM12) | (1<< CS12) | ( 0<< CS11) | (0<< CS10);
+  TCCR1B = 0x0d;  //(0<< ICNC1) | (0<< ICES1) | (0<< WGM13) | (1<< WGM12) | (1<< CS12) | ( 0<< CS11) | (0<< CS10);
   TCCR1C = 0x00;  //(0<< FOC1A) | (0<< FOC1B) | (0<< FOC1C);
   TCNT1 = 0;
-  OCR1A = SPINDLE_PWM_MIN_ON;   // set for 2000ticks/ms
+  OCR1A = RPM_TICKS;    //2604;   // set for 5Hz
   OCR1B = 0;    // not used
   OCR1C = 0;  // 16Mhz / 1024 / 20Hz 
   TIMSK1 = 0x02;  //(0<< ICIE1) | (0<< OCIE1C) | (0<< OCIE1B) | (1<< OCIE1A) | (0<< TOIE1);
+  
+  // setup timer for spindle PWM generation
+  // clear oc3a on match/ set on reset, 64x prescaler, fast pwm ICR3-max OCR3-compare mode, int off [interrupt on ocra match
+  TCCR3A = 0x82;  //(1<< COM3A1) | (0<< COM3A0) | (0<<COM3B1) | (0<< COM3B0) | (0<<COM3C1) | (0<< COM3C0) | ( 1<< WGM31) | (0<< WGM30);
+  TCCR3B = 0x1a;  //(0<< ICNC3)  | (0<< ICES3)  |           0 | (1<< WGM33)  | (1<< WGM32) | (0<< CS32)   | ( 1<< CS31)  | (0<< CS30);
+  TCCR3C = 0x00;  //(0<< FOC3A);
+  TCNT3 = 0;
+  ICR3 = SPINDLE_PWM_PERIOD;      // freqency register
+  OCR3A = SPINDLE_PWM_OFF;   // compare register 2604;   // set for 5Hz
+  OCR3B = 0;    // not used
+  OCR3C = 0;
+  TIMSK3 = 0x00;  // 0 | 0 | (0<< ICIE3) | 0 | (0<< OCIE3C) | (0<< OCIE3B) | (0<< OCIE3A) | (0<< TOIE3);
 
   // Init the internal PLL
   PLLFRQ = (0<< PINMUX) | (0<< PLLUSB) | (1<< PLLTM1) | (1<< PLLTM0) | (0<< PDIV3) | (1<< PDIV2) | (0<< PDIV1) | (0<< PDIV0);
@@ -445,7 +463,7 @@ void setup( void) {
 //  myPID.SetSampleTime( 160);
   myPID->SetMode(AUTOMATIC);
 
-  esc_state = ( PINB_ESC_PWR_SENSE & (1<< PIN_ESC_PWR_SENSE)) ? ESC_AUTO : ESC_NC;
+  esc_state = ( PINB_SPINDLE_CTRL & (1<< PIN_SPINDLE_SENSE)) ? ESC_AUTO : ESC_NC;
 }
 
 void loop( void) { 
@@ -455,7 +473,7 @@ void loop( void) {
   sleep_enable();
   
   // now loop
-  _rpm_pwm = SPINDLE_PWM_OFF;
+  setSpindlePwm( SPINDLE_PWM_OFF);
   uint16_t tock = 0;
 
   while( true) {
@@ -472,10 +490,14 @@ void loop( void) {
 
     // do busy waiting, using arduino delay/millis etc will block timer1
     // tock frquency is 6Hz
-    if ( sys_ticks >= 4) {
+    if ( sys_ticks >= 8) {
       sys_ticks = 0;
-//      Serial.print( _rpm_current);
-//      Serial.println( "rpm");
+      Serial.print( _rpm_value);
+      Serial.print( "/");
+      Serial.print( _rpm_current);
+      Serial.print( "/");
+      Serial.print( _rpm_pwm);
+      Serial.println( " tgt/cur/pwm");
     }
 
     while( sys_ticks < 4 && !ui_update) {
@@ -610,7 +632,7 @@ void setupUI() {
   TFTscreen.print( "gCtrl");
   TFTscreen.setTextSize(1);
   sprintf( cbuf, "%s", VERSION);
-  TFTscreen.setCursor( 130, 120);
+  TFTscreen.setCursor( 136, 120);
   TFTscreen.print( cbuf);
   
   TFTscreen.setCursor( 0, 120);
@@ -861,17 +883,28 @@ void receiveEvent( int howMany) {
           switch( par) {
             // spindle control M3/4/5
             case CMD_M3:
+              _sMode = par;
+//              Setpoint = (double) _rpm_value;
+
+              PORT_LED_TX &= !(1<< PIN_LED_TX);
+              _motor_manual = false;
+              setSpindleCW( true);
+              setSpindleOn( true);
+            break;
             case CMD_M4:
               _sMode = par;
 //              Setpoint = (double) _rpm_value;
 
               PORT_LED_TX &= !(1<< PIN_LED_TX);
               _motor_manual = false;
+              setSpindleCW( false);
+              setSpindleOn( true);
             break;
             case CMD_M5: 
               _sMode = par; 
 //              Setpoint = 0;
               PORT_LED_TX |= (1<< PIN_LED_TX);
+              setSpindleOn( false);
             break;
             
             // tool change: M6
@@ -881,12 +914,16 @@ void receiveEvent( int howMany) {
             // coolant control M7/8/9
             case CMD_M7: coolant |= COOLANT_MIST;
               PORT_LED_RX &= !(1<< PIN_LED_RX);
+              setCoolantMist( true);
             break;
             case CMD_M8: coolant |= COOLANT_FLOOD;
               PORT_LED_RX &= !(1<< PIN_LED_RX);
+              setCoolantFlood( true);
             break;
             case CMD_M9: coolant = COOLANT_OFF;
               PORT_LED_RX |= (1<< PIN_LED_RX);
+              setCoolantMist( false);
+              setCoolantFlood( false);
             break;
           }
           break;
@@ -934,6 +971,30 @@ void requestEvent() {
   Wire.write( _rpm_value);
 }
 
+void setSpindleOn( bool on) {
+  if ( on) PORT_SPINDLE_CTRL |= (1 << PIN_SPINDLE_EN);
+  else PORT_SPINDLE_CTRL &= ~(1 << PIN_SPINDLE_EN);
+}
+
+void setSpindleCW( bool cw) {
+  if ( cw) PORT_SPINDLE_CTRL |= (1 << PIN_SPINDLE_DIR);
+  else PORT_SPINDLE_CTRL &= ~(1 << PIN_SPINDLE_DIR);
+}
+
+void setSpindlePwm( int rpv) {
+  OCR3A = _rpm_pwm = rpv;
+}
+
+void setCoolantMist( bool on) {
+  if ( on) PORT_COOLANT_CTRL |= (1 << PIN_COOLANT_MIST);
+  else PORT_COOLANT_CTRL &= ~(1 << PIN_COOLANT_MIST);
+}
+
+void setCoolantFlood( bool on) {
+  if ( on) PORT_COOLANT_CTRL |= (1 << PIN_COOLANT_FLOOD);
+  else PORT_COOLANT_CTRL &= ~(1 << PIN_COOLANT_FLOOD);
+}
+
 //----------------------------------------------------------------------------
 // helpers
   
@@ -955,7 +1016,7 @@ byte encoder( byte input) {
 // interrupt handler for esc pwr sense
 
 ISR( PCINT0_vect) {
-  byte pwr_sense = PINB_ESC_PWR_SENSE & (1<< PIN_ESC_PWR_SENSE);
+  byte pwr_sense = PINB_SPINDLE_CTRL & (1<< PIN_SPINDLE_SENSE);
   
   if ( pwr_sense) {
     esc_ticks = 0;
@@ -1055,7 +1116,7 @@ ISR( TIMER0_OVF) {
 // rpm counter gate interrupt
   
 // rpm measurement gate clock
-ISR(TIMER3_COMPA_vect) {
+ISR(TIMER1_COMPA_vect) {
   setLED( ( sys_ticks & 0x01) ? 0x3ff : (_rpm_pwm >> 1), _motor_manual, _motor_manual);
   
   sys_ticks++;
@@ -1080,7 +1141,7 @@ ISR(TIMER3_COMPA_vect) {
       if ( ++esc_ticks >= ESC_TICKS_MIN) {
         esc_ticks = 0;
         esc_state = ESC_SETUP_MAX;
-        _rpm_pwm = SPINDLE_PWM_MAX;
+        setSpindlePwm( SPINDLE_PWM_MAX);
         ui_update = true;
       }
     break;
@@ -1095,14 +1156,14 @@ ISR(TIMER3_COMPA_vect) {
       if (_motor_manual ^ (_sMode != SPINDLE_OFF)) {
         Input = (double) _rpm_current;
         myPID->Compute();
-        _rpm_pwm = (int) Output;
+        setSpindlePwm( (int) Output);
       } else {
-        _rpm_pwm = SPINDLE_PWM_OFF;
+        setSpindlePwm( SPINDLE_PWM_OFF);
       }
     break;
     case ESC_NC:
     default:
-      _rpm_pwm = SPINDLE_PWM_OFF;
+      setSpindlePwm( SPINDLE_PWM_OFF);
       ui_update = true;
   }
 }
@@ -1111,7 +1172,8 @@ ISR(TIMER3_COMPA_vect) {
 // pwm timer
   
 // timer interrupt for pwm signal generation
-ISR(TIMER1_COMPA_vect) {
+/*
+ISR(TIMER3_COMPA_vect) {
     switch( state_machine) {
       case PULSE:
         OCR1A = SPINDLE_PWM_MIN_ON + _rpm_pwm;
@@ -1127,6 +1189,7 @@ ISR(TIMER1_COMPA_vect) {
         state_machine = PULSE;  
     }
 }//end ISR TIM0_COMPA_vect
+*/
 
 void setLED( int val, boolean doBlink, boolean freq) {
 
