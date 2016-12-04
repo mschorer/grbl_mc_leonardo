@@ -43,7 +43,7 @@
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "3.1a"
+#define VERSION  "3.1c"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -88,8 +88,8 @@
 #define PORT_SPINDLE_CTRL  PORTB
 
 #define PIN_SPINDLE_SENSE   PB4
-#define PIN_SPINDLE_DIR    PB5
-#define PIN_SPINDLE_EN    PB6
+#define PIN_SPINDLE_DIR    PB6
+#define PIN_SPINDLE_EN    PB5
 
 #define DIR_RPM_SENSE   DDRD
 #define PORT_RPM_SENSE  PORTD
@@ -171,19 +171,19 @@
 #define RPM_PWM_SCALE 25    //((RPM_MAX - RPM_OFF) / 120)
 
 #define RPM_MAXHZ     (RPM_MAX / 60)  // 250
-#define RPM_PPR       20  // 8 pulses per rotation
+#define RPM_PPR       12  // 8 pulses per rotation
 
 // calculate gate frequency
-// RPM_MAXHZ * RPM_PPR = 250 * 8 = 2000 pulses per second
-// make it fit in 8bit: 2000 / 256 = 7,8125
+// RPM_MAXHZ * RPM_PPR = 250 * 12 = 3000 pulses per second
+// make it fit in 8bit: 3000 / 250 = 12
 // choose 16 
 
-#define RPM_HZ        8  // gate frequency in Hz
+#define RPM_HZ        12  // gate frequency in Hz
 
 // choose a reasonable size for the averaging buffer (this one also makes the rpm-multiplier easy to calculate (60 / 6 = 10))
 #define RPM_BUFFER    6  // averaging buffer depth 
 
-#define RPM_SCALE     5  //(((RPM_HZ / RPM_PPR) * (60 / RPM_BUFFER)))
+#define RPM_SCALE     10  //(((RPM_HZ / RPM_PPR) * (60 / RPM_BUFFER)))
 #define RPM_TICKS     (15625 / RPM_HZ)            // timer ticks
 //-----------------------------------------------------------
 
@@ -204,7 +204,7 @@ volatile byte servo_pause = 0;
 volatile byte pin_updn = 0xff;
 volatile byte pin_mute = 0xff;
 
-volatile int _rpm_value = 2000;
+volatile int _rpm_value = 4000;
 volatile int _rpm_current = 0;
 
 volatile uint16_t sys_ticks;
@@ -277,10 +277,10 @@ void setup( void) {
   
   setCrc = eeprom_crc( (uint8_t*) &settings.settings, sizeof( pidParms));
 
-  if ( setCrc != settings.crc) {
-    settings.settings.consKp = 0.4;
-    settings.settings.consKi = 0.25;
-    settings.settings.consKd = 0.05;
+  if ( true || setCrc != settings.crc) {
+    settings.settings.consKp = 0.1;    // 0.4
+    settings.settings.consKi = 0.1;    // 0.25
+    settings.settings.consKd = 0.1;    // 0.05
     settings.crc = eeprom_crc( (uint8_t*) &settings.settings, sizeof( pidParms));
     
     eeprom_put( EEP_SETTINGS_ADDR, (uint8_t*) &settings, sizeof( Settings));
@@ -490,7 +490,7 @@ void loop( void) {
 
     // do busy waiting, using arduino delay/millis etc will block timer1
     // tock frquency is 6Hz
-    if ( sys_ticks >= 8) {
+    if ( sys_ticks >= 6) {
       sys_ticks = 0;
       Serial.print( _rpm_value);
       Serial.print( "/");
@@ -500,7 +500,7 @@ void loop( void) {
       Serial.println( " tgt/cur/pwm");
     }
 
-    while( sys_ticks < 4 && !ui_update) {
+    while( sys_ticks < 6 && !ui_update) {
       sleep_cpu();
     }
     ui_update = false;
@@ -1099,7 +1099,10 @@ ISR( INT6_vect) {
   if ( mute ^ pin_mute) {
     pin_mute = mute;
 
-    if (( mute & (1<< PIN_MUTE)) == LOW) _motor_manual = !_motor_manual;
+    if (( mute & (1<< PIN_MUTE)) == LOW) {
+      _motor_manual = !_motor_manual;
+    }
+    setSpindleOn( _motor_manual);
     
     ui_update = true;
   }
