@@ -43,7 +43,7 @@
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "3.1c"
+#define VERSION  "3.1e"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -111,10 +111,10 @@
 //#define SPINDLE_PWM_MIN_ON 25      // 1ms
 //#define SPINDLE_PWM_MIN_OFF 600   // 1ms
 
-#define SPINDLE_PWM_PERIOD 1010   // 1ms
+#define SPINDLE_PWM_PERIOD 1002   // 1ms
 
-#define SPINDLE_PWM_OFF 5        // 0.5%
-#define SPINDLE_PWM_SLOW 50
+#define SPINDLE_PWM_OFF 1        // 0.5%
+#define SPINDLE_PWM_SLOW 41
 #define SPINDLE_PWM_MAX 1000      // 99.5%
 
 #define BLINK_TICKS_MANUAL 5
@@ -186,20 +186,20 @@
 #define RPM_SCALE     10  //(((RPM_HZ / RPM_PPR) * (60 / RPM_BUFFER)))
 #define RPM_TICKS     (15625 / RPM_HZ)            // timer ticks
 //-----------------------------------------------------------
-
+/*
 enum SequencerState_t {
   PULSE,
   PAUSE
 };
-
+*/
 volatile byte esc_state = ESC_NC;
 volatile byte _esc_state = ESC_NC;
 volatile char esc_ticks = 0;
 
 volatile bool ui_update = true;
 
-volatile byte state_machine = PULSE;
-volatile byte servo_pause = 0;
+//volatile byte state_machine = PULSE;
+//volatile byte servo_pause = 0;
 
 volatile byte pin_updn = 0xff;
 volatile byte pin_mute = 0xff;
@@ -253,16 +253,15 @@ struct pidParms {
 };
 
 struct Settings {
-  pidParms settings;
+  pidParms pid;
   long crc;
 };
 
 Settings settings; 
 long setCrc;
 
-// double consKp=0.4, consKi=0.25, consKd=0.05;
 double Setpoint, Input, Output;
-PID *myPID;  //(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
+PID *myPID;
 
 TFT TFTscreen = TFT( DP_CS, DP_DC, DP_RST);
 
@@ -275,13 +274,13 @@ void setup( void) {
 
   eeprom_get( EEP_SETTINGS_ADDR, (uint8_t*) &settings, sizeof( Settings));
   
-  setCrc = eeprom_crc( (uint8_t*) &settings.settings, sizeof( pidParms));
+  setCrc = eeprom_crc( (uint8_t*) &settings.pid, sizeof( pidParms));
 
-  if ( true || setCrc != settings.crc) {
-    settings.settings.consKp = 0.1;    // 0.4
-    settings.settings.consKi = 0.1;    // 0.25
-    settings.settings.consKd = 0.1;    // 0.05
-    settings.crc = eeprom_crc( (uint8_t*) &settings.settings, sizeof( pidParms));
+  if ( setCrc != settings.crc) {
+    settings.pid.consKp = 0.1;    // 0.4
+    settings.pid.consKi = 0.1;    // 0.25
+    settings.pid.consKd = 0.1;    // 0.05
+    settings.crc = eeprom_crc( (uint8_t*) &settings.pid, sizeof( pidParms));
     
     eeprom_put( EEP_SETTINGS_ADDR, (uint8_t*) &settings, sizeof( Settings));
 //    EEPROM.put( EEP_SETTINGS_ADDR, &settings);
@@ -289,7 +288,7 @@ void setup( void) {
     Serial.println( "parms preset");
   } else Serial.println( "parms read");
   
-  myPID = new PID(&Input, &Output, &Setpoint, settings.settings.consKp, settings.settings.consKi, settings.settings.consKd, DIRECT);
+  myPID = new PID(&Input, &Output, &Setpoint, settings.pid.consKp, settings.pid.consKi, settings.pid.consKd, DIRECT);
   
   TFTscreen.begin();
   TFTscreen.setRotation( 3);
@@ -298,15 +297,7 @@ void setup( void) {
   TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
   TFTscreen.stroke( ST7735_WHITE);
   TFTscreen.fill( ST7735_BLACK);
-/*
-  TFTscreen.setTextSize(3);
-  TFTscreen.setCursor( 40, 30);
-  TFTscreen.print( "gCtrl");
-  TFTscreen.setTextSize(1);
-  sprintf( cbuf, "%s", VERSION);
-  TFTscreen.setCursor( 70, 70);
-  TFTscreen.print( cbuf);
-*/  
+
   for( uint8_t i=0; i < RPM_BUFFER; i++) {
     _rpm_avg[ i] = 0;
   }
@@ -433,31 +424,7 @@ void setup( void) {
   Wire.begin( 0x5c);            // join i2c bus with address $5c for SpeedControl
   Wire.onReceive(receiveEvent); // register event
   Wire.onRequest(requestEvent); // register event
-/*
-  // give esc a change to check adapt to our signal, skip esc setup mode
-  TFTscreen.setTextSize(1);
-  
-  TFTscreen.setCursor( 48, 90);
-  TFTscreen.print( "[min] ");
-  
-  // output servo-off for 1s
-  _rpm_pwm = RPM_OFF;
-  sys_ticks = 0;
-  while( sys_ticks < 10) {
-    setLED( sys_ticks * 200, true, true);
-  }
 
-  // output servo-max for 1s, this make the esc skip setup
-  _rpm_pwm = SPINDLE_PWM_MAX;
-  TFTscreen.print( "[max]");
-
-  sys_ticks = 0;
-  while( sys_ticks < 10) {
-    setLED( 1000 - sys_ticks * 200, true, true);
-  }
-
-  TFTscreen.background( ST7735_BLACK);
-*/  
   Setpoint = (double) _rpm_value;
   myPID->SetOutputLimits( 0, SPINDLE_PWM_MAX);
 //  myPID.SetSampleTime( 160);
@@ -492,6 +459,9 @@ void loop( void) {
     // tock frquency is 6Hz
     if ( sys_ticks >= 6) {
       sys_ticks = 0;
+      Serial.print( "M");
+      Serial.print( _sMode);
+      Serial.print( " S");
       Serial.print( _rpm_value);
       Serial.print( "/");
       Serial.print( _rpm_current);
@@ -521,11 +491,11 @@ void dumpSerial() {
   Serial.println( "]");
   
   Serial.print( "parms [");
-  Serial.print( settings.settings.consKp);
+  Serial.print( settings.pid.consKp);
   Serial.print( "_");
-  Serial.print( settings.settings.consKi);
+  Serial.print( settings.pid.consKi);
   Serial.print( "_");
-  Serial.print( settings.settings.consKd);
+  Serial.print( settings.pid.consKd);
   Serial.println( "]");
 }
   
@@ -636,11 +606,11 @@ void setupUI() {
   TFTscreen.print( cbuf);
   
   TFTscreen.setCursor( 0, 120);
-  TFTscreen.print( setCrc, HEX);
-  TFTscreen.print( "-");
-  TFTscreen.print( settings.crc, HEX);
-  TFTscreen.print( "-");
-  TFTscreen.print( sizeof(pidParms), HEX);
+  TFTscreen.print( "crc ");
+  TFTscreen.print(( setCrc == settings.crc) ? "OK" : "ERR");
+//  TFTscreen.print( settings.crc, HEX);
+//  TFTscreen.print( "-");
+//  TFTscreen.print( sizeof(pidParms), HEX);
   
   updateFault( true);
   updateLimit( true);
