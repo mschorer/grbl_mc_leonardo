@@ -43,7 +43,7 @@
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "3.1e"
+#define VERSION  "3.2a"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -252,12 +252,24 @@ struct pidParms {
   double consKp, consKi, consKd;
 };
 
+struct pwmParms {
+  int period;
+  int min;
+  int width;
+};
+
 struct Settings {
   pidParms pid;
+  pwmParms pwm;
+};
+
+struct SettingsStore {
+  Settings data;
   long crc;
 };
 
-Settings settings; 
+SettingsStore store;
+Settings *settings = &store.data; 
 long setCrc;
 
 double Setpoint, Input, Output;
@@ -272,23 +284,23 @@ void setup( void) {
   Serial.print("grbl_mc ");
   Serial.println( VERSION);
 
-  eeprom_get( EEP_SETTINGS_ADDR, (uint8_t*) &settings, sizeof( Settings));
+  eeprom_get( EEP_SETTINGS_ADDR, (uint8_t*) &store, sizeof( SettingsStore));
   
-  setCrc = eeprom_crc( (uint8_t*) &settings.pid, sizeof( pidParms));
+  setCrc = eeprom_crc( (uint8_t*) &store.data, sizeof( Settings));
 
-  if ( setCrc != settings.crc) {
-    settings.pid.consKp = 0.1;    // 0.4
-    settings.pid.consKi = 0.1;    // 0.25
-    settings.pid.consKd = 0.1;    // 0.05
-    settings.crc = eeprom_crc( (uint8_t*) &settings.pid, sizeof( pidParms));
+  if ( true || setCrc != store.crc) {
+    settings->pid.consKp = 0.06;    // 0.4
+    settings->pid.consKi = 0.06;    // 0.25
+    settings->pid.consKd = 0.01;    // 0.05
+    store.crc = eeprom_crc( (uint8_t*) &store.data, sizeof( Settings));
     
-    eeprom_put( EEP_SETTINGS_ADDR, (uint8_t*) &settings, sizeof( Settings));
+    eeprom_put( EEP_SETTINGS_ADDR, (uint8_t*) &store, sizeof( SettingsStore));
 //    EEPROM.put( EEP_SETTINGS_ADDR, &settings);
     
     Serial.println( "parms preset");
   } else Serial.println( "parms read");
   
-  myPID = new PID(&Input, &Output, &Setpoint, settings.pid.consKp, settings.pid.consKi, settings.pid.consKd, DIRECT);
+  myPID = new PID(&Input, &Output, &Setpoint, settings->pid.consKp, settings->pid.consKi, settings->pid.consKd, DIRECT);
   
   TFTscreen.begin();
   TFTscreen.setRotation( 3);
@@ -487,15 +499,15 @@ void dumpSerial() {
   Serial.print( "parms crc [");
   Serial.print( setCrc);
   Serial.print( "_");
-  Serial.print( settings.crc);
+  Serial.print( store.crc);
   Serial.println( "]");
   
   Serial.print( "parms [");
-  Serial.print( settings.pid.consKp);
+  Serial.print( settings->pid.consKp);
   Serial.print( "_");
-  Serial.print( settings.pid.consKi);
+  Serial.print( settings->pid.consKi);
   Serial.print( "_");
-  Serial.print( settings.pid.consKd);
+  Serial.print( settings->pid.consKd);
   Serial.println( "]");
 }
   
@@ -607,8 +619,8 @@ void setupUI() {
   
   TFTscreen.setCursor( 0, 120);
   TFTscreen.print( "crc ");
-  TFTscreen.print(( setCrc == settings.crc) ? "OK" : "ERR");
-//  TFTscreen.print( settings.crc, HEX);
+  TFTscreen.print(( setCrc == store.crc) ? "OK" : "ERR");
+//  TFTscreen.print( store.crc, HEX);
 //  TFTscreen.print( "-");
 //  TFTscreen.print( sizeof(pidParms), HEX);
   
@@ -990,7 +1002,7 @@ ISR( PCINT0_vect) {
   
   if ( pwr_sense) {
     esc_ticks = 0;
-    esc_state = ESC_SETUP_MIN;
+    esc_state = ESC_AUTO;  //ESC_SETUP_MIN;
   } else {
     esc_state = ESC_NC;
   } 
@@ -1109,35 +1121,50 @@ ISR(TIMER1_COMPA_vect) {
   
   if ( _rpm_current != last_rpm) ui_update = true;
 
-  switch( esc_state) {
-    case ESC_SETUP_MIN:
-      if ( ++esc_ticks >= ESC_TICKS_MIN) {
-        esc_ticks = 0;
-        esc_state = ESC_SETUP_MAX;
-        setSpindlePwm( SPINDLE_PWM_MAX);
-        ui_update = true;
-      }
-    break;
-    case ESC_SETUP_MAX:
-      if ( ++esc_ticks >= ESC_TICKS_MAX) {
-        esc_ticks = 0;
-        esc_state = ESC_AUTO;
-        ui_update = true;
-      } else break;
-
-    case ESC_AUTO:
-      if (_motor_manual ^ (_sMode != SPINDLE_OFF)) {
-        Input = (double) _rpm_current;
-        myPID->Compute();
-        setSpindlePwm( (int) Output);
-      } else {
+  if ( false) {
+    // esc controller, implement esc enable sequence (min,max throttle)
+    
+    switch( esc_state) {
+      case ESC_SETUP_MIN:
+        if ( ++esc_ticks >= ESC_TICKS_MIN) {
+          esc_ticks = 0;
+          esc_state = ESC_SETUP_MAX;
+          setSpindlePwm( SPINDLE_PWM_MAX);
+          ui_update = true;
+        }
+      break;
+      case ESC_SETUP_MAX:
+        if ( ++esc_ticks >= ESC_TICKS_MAX) {
+          esc_ticks = 0;
+          esc_state = ESC_AUTO;
+          ui_update = true;
+        } else break;
+  
+      case ESC_AUTO:
+        if (_motor_manual ^ (_sMode != SPINDLE_OFF)) {
+          Input = (double) _rpm_current;
+          myPID->Compute();
+          setSpindlePwm( (int) Output);
+        } else {
+          setSpindlePwm( SPINDLE_PWM_OFF);
+        }
+      break;
+      
+      case ESC_NC:
+      default:
         setSpindlePwm( SPINDLE_PWM_OFF);
-      }
-    break;
-    case ESC_NC:
-    default:
+        ui_update = true;
+    }
+  } else {
+    // direct mode control
+    
+    if (_motor_manual ^ (_sMode != SPINDLE_OFF)) {
+      Input = (double) _rpm_current;
+      myPID->Compute();
+      setSpindlePwm( (int) Output);
+    } else {
       setSpindlePwm( SPINDLE_PWM_OFF);
-      ui_update = true;
+    }
   }
 }
 
