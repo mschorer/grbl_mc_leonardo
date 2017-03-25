@@ -43,7 +43,7 @@
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "3.2a"
+#define VERSION  "3.3b"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -310,9 +310,7 @@ void setup( void) {
   TFTscreen.stroke( ST7735_WHITE);
   TFTscreen.fill( ST7735_BLACK);
 
-  for( uint8_t i=0; i < RPM_BUFFER; i++) {
-    _rpm_avg[ i] = 0;
-  }
+  clearRpmBuffer();
 
   //----------------------------------------------------------------------------
   // configure pins
@@ -443,6 +441,11 @@ void setup( void) {
   myPID->SetMode(AUTOMATIC);
 
   esc_state = ( PINB_SPINDLE_CTRL & (1<< PIN_SPINDLE_SENSE)) ? ESC_AUTO : ESC_NC;
+  
+  setSpindleOn( false);
+  setSpindleCW( true);
+  setCoolantMist( false);
+  setCoolantFlood( false);
 }
 
 void loop( void) { 
@@ -953,9 +956,24 @@ void requestEvent() {
   Wire.write( _rpm_value);
 }
 
+void clearRpmBuffer() {
+  for( uint8_t i=0; i < RPM_BUFFER; i++) {
+    _rpm_avg[ i] = 0;
+  }
+  
+  _rpm_avg_sum = 0;
+  _rpm_current = 0;
+}
+
 void setSpindleOn( bool on) {
-  if ( on) PORT_SPINDLE_CTRL |= (1 << PIN_SPINDLE_EN);
-  else PORT_SPINDLE_CTRL &= ~(1 << PIN_SPINDLE_EN);
+  if ( on) {
+    Output = 0;
+    myPID->Initialize();
+
+    clearRpmBuffer();
+
+    PORT_SPINDLE_CTRL |= (1 << PIN_SPINDLE_EN);
+  } else PORT_SPINDLE_CTRL &= ~(1 << PIN_SPINDLE_EN);
 }
 
 void setSpindleCW( bool cw) {
