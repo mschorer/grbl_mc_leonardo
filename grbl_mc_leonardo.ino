@@ -43,7 +43,7 @@
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "3.3b"
+#define VERSION  "3.4c"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -101,9 +101,13 @@
 
 #define DIR_COOLANT_CTRL   DDRD
 #define PORT_COOLANT_CTRL  PORTD
-#define PIN_COOLANT_MIST   PD0
+#define PIN_COOLANT_MIST   PD4
 #define PIN_COOLANT_FLOOD  PD1
-
+/*
+#define DIR_LASER_CTRL   DDRC
+#define PORT_LASER_CTRL  PORTC
+#define PIN_LASER_EN       PC7
+*/
 #define DEBOUNCE_TICKS 2
 
 // the timer is set to 16MHz / 256 = 62.500 Hz
@@ -126,6 +130,9 @@
 
 #define MSG_LEN 100
 #define MSG_MAX 100
+
+// set tool index that is representing the laser
+#define TOOL_INDEX_LASER  3
 
 // defined commands using upper nibble
 #define CMD_MX  0x00
@@ -166,6 +173,8 @@
 #define ESC_TICKS_MIN  16
 #define ESC_TICKS_MAX  4
 
+//#define LASER_MIN_ON  500
+
 #define RPM_OFF 0
 #define RPM_MAX     15000
 #define RPM_PWM_SCALE 25    //((RPM_MAX - RPM_OFF) / 120)
@@ -204,8 +213,8 @@ volatile bool ui_update = true;
 volatile byte pin_updn = 0xff;
 volatile byte pin_mute = 0xff;
 
-volatile int _rpm_value = 4000;
-volatile int _rpm_current = 0;
+volatile int _power_value = 4000;
+volatile int _power_current = 0;
 
 volatile uint16_t sys_ticks;
 
@@ -224,8 +233,8 @@ int _sMode = SPINDLE_OFF;
 int d_sMode = SPINDLE_OFF;
 
 bool setup_rpm = true;
-int d_rpm_value = -1;
-int d_rpm_current = -1;
+int d_power_value = -1;
+int d_power_current = -1;
 uint16_t d_rpm_color = 0;
 
 volatile uint8_t coolant = 0;
@@ -335,7 +344,10 @@ void setup( void) {
   PORT_BACKLIGHT &= ~(1<< PIN_BACKLIGHT);  // enable pullup for input
 
   DIR_COOLANT_CTRL |= ((1<< PIN_COOLANT_MIST) | (1<< PIN_COOLANT_FLOOD));
-  PORT_COOLANT_CTRL &= ~((1<< PIN_COOLANT_MIST) | (1<< PIN_COOLANT_FLOOD));  // enable pullup for input
+  PORT_COOLANT_CTRL &= ~((1<< PIN_COOLANT_MIST) | (1<< PIN_COOLANT_FLOOD));  // disable coolants
+
+//  DIR_LASER_CTRL |= (1<< PIN_LASER_EN);
+//  PORT_LASER_CTRL &= ~(1<< PIN_LASER_EN);  // disable laser
 
   // switch to PWM TMR3A, dir needs to be set "out"
   DIR_SPINDLE_PWM |= (1<< PIN_SPINDLE_PWM);      // set PE6 as output
@@ -355,7 +367,7 @@ void setup( void) {
   // set spares to input
 //  DDRC &= ~(1<< PC7);                // high
   DDRF &= ~((1<< PF1) || (1<< PF0));                // high
-  DDRD &= ~((1<< PD4) || (1<< PD1) || (1<< PD0)); // high
+//  DDRD &= ~((1<< PD4) || (1<< PD1) || (1<< PD0)); // high
 
   // enable pin-change interrupts for up/down/mute sources
   EIMSK = 0;
@@ -373,12 +385,12 @@ void setup( void) {
   GTCCR = (0<< TSM) | (0<< PSRSYNC);
 
   // setup counter for rpm mesuring
-  // disconnect oc1a/oc1b, external clock, normal mode, no interrupts
-  TCCR0A = 0x00;  //(0<< COM0A1) | (0<< COM0A0) | (0<< COM0B1) | (0<< COM0B0) | (0<< WGM01) | (0<< WGM00);
-  TCCR0B = 0x07;  //(0<< FOC0A) | (0<< FOC0B) | (0<< WGM02) | (1<< CS02) | ( 1<< CS01) | (1<< CS00);
+  // disconnect oc1a&oc1b, ext clock via T0, normal mode, no interrupts
+  TCCR0A = 0x00;  //(0<< COM0A1) | (0<< COM0A0) | (1<< COM0B1) | (0<< COM0B0) | bit3 | bit2 | (0<< WGM01) | (0<< WGM00);
+  TCCR0B = 0x07;  //(0<< FOC0A) | (0<< FOC0B) | bit5 | bit4 | (0<< WGM02) | (1<< CS02) | ( 1<< CS01) | (1<< CS00);
   TCNT0 = 0;
-  OCR0A = 0;     // not used
-  OCR0B = 0;    // not used
+  OCR0A = 0;      // not used
+  OCR0B = 0;      // preset with fully off
   TIMSK0 = 0x01;  //(0<< OCIE0B) | (0<< OCIE0A) | (0<< TOIE0);
 
   // setup timer for rpm measuring gate
@@ -414,10 +426,12 @@ void setup( void) {
   TC4H  = 0x00;
   TCCR4A = 0x82;  //(1<< COM4A1) | (0<< COM4A0) | (0<< COM4B1) | (0<< COM4B0) | (0<< FOC4A) | (0<< FOC4B) |(1<< PWM4A) | (0<< PWM4B);
   TCCR4B = 0x08;  //(0<< PWM4X) | (0<< PSR4) | (0<< DTPS40) | (0<< DTPS41) | (1<< CS43) | (0<< CS42) | (0<< CS41) | (0<< CS40);
-  TC4H  = 0x03;
+//  TC4H  = 0x03;
 //  TCCR4C = 0x00;  //(0<< COM4A1S) | (0<< COM4A0S) | (0<< COM4B1S) | (0<< COM4B0S) | (0<< COM4D1) | (0<< COM4D0) | (0<< FOC4D) | (0<< PWM4D);
+
+// fast pwm
   TC4H  = 0x00;
-  TCCR4D = 0x01;  //(0<< FPIE4) | (0<< FPEN4) | (0<< FPNC4) | (0<< FPES4) | (0<< FPAC4) | (0<< FPF4) | (0<< WGM41) | (1<< WGM40);
+  TCCR4D = 0x00;  //(0<< FPIE4) | (0<< FPEN4) | (0<< FPNC4) | (0<< FPES4) | (0<< FPAC4) | (0<< FPF4) | (0<< WGM41) | (0<< WGM40);
   TCCR4E = 0x00;  //(0<< TLOCK4) | (0<< ENHC4) | (0<< OC4OE5) | (0<< OC4OE4) | (0<< OC4OE3) | (0<< OE4OC2) | (0<< OE4OC1) | (0<< OE4OC0);
 //  TCNT4 = 0;
   OCR4A = 0x80;     // pwm freq
@@ -435,15 +449,18 @@ void setup( void) {
   Wire.onReceive(receiveEvent); // register event
   Wire.onRequest(requestEvent); // register event
 
-  Setpoint = (double) _rpm_value;
+  setSpindleRpm( _power_value);
   myPID->SetOutputLimits( 0, SPINDLE_PWM_MAX);
 //  myPID.SetSampleTime( 160);
   myPID->SetMode(AUTOMATIC);
 
   esc_state = ( PINB_SPINDLE_CTRL & (1<< PIN_SPINDLE_SENSE)) ? ESC_AUTO : ESC_NC;
+
+  setLaser( false, true, 0);
   
   setSpindleOn( false);
   setSpindleCW( true);
+
   setCoolantMist( false);
   setCoolantFlood( false);
 }
@@ -477,9 +494,9 @@ void loop( void) {
       Serial.print( "M");
       Serial.print( _sMode);
       Serial.print( " S");
-      Serial.print( _rpm_value);
+      Serial.print( _power_value);
       Serial.print( "/");
-      Serial.print( _rpm_current);
+      Serial.print( _power_current);
       Serial.print( "/");
       Serial.print( _rpm_pwm);
       Serial.println( " tgt/cur/pwm");
@@ -686,8 +703,8 @@ void updateRpm( bool force) {
     }
   }
 
-  if ( d_rpm_value != _rpm_value || force) {  
-    if ( _rpm_value) sprintf( cbuf, "%05d", _rpm_value);  //String( _rpm_value).toCharArray( cbuf, 5);  //GLCD.Printf("%05d", _rpm_value);
+  if ( d_power_value != _power_value || force) {  
+    if ( _power_value) sprintf( cbuf, "%05d", _power_value);  //String( _power_value).toCharArray( cbuf, 5);  //GLCD.Printf("%05d", _power_value);
     else sprintf( cbuf, "-off-");
 //    TFTscreen.fill( 0,0,0);
 //    TFTscreen.rect( 0,0,30,8);
@@ -695,26 +712,26 @@ void updateRpm( bool force) {
     TFTscreen.setTextSize(2);
     TFTscreen.setCursor(40, 48);
     TFTscreen.print( cbuf);
-    d_rpm_value = _rpm_value;
+    d_power_value = _power_value;
   }
   
-  int rpm_diff = _rpm_value - _rpm_current;
+  int rpm_diff = _power_value - _power_current;
   uint16_t color;
 
-  if ( abs( rpm_diff) > (_rpm_value / 8)) {
+  if ( abs( rpm_diff) > (_power_value / 8)) {
     if ( rpm_diff > 0) color = ST7735_BLUE;
     else color = ST7735_CYAN;
   } else color = ST7735_GREEN;
 
-  if ( d_rpm_current != _rpm_current || d_rpm_color != color || force) {
-    if ( _rpm_current < 20000) sprintf( cbuf, "%05d", _rpm_current);  //rpmDisplay.Printf("%05d", _rpm_current);
+  if ( d_power_current != _power_current || d_rpm_color != color || force) {
+    if ( _power_current < 20000) sprintf( cbuf, "%05d", _power_current);  //rpmDisplay.Printf("%05d", _power_current);
 
     TFTscreen.setTextColor( color, ST7735_BLACK);
   
     TFTscreen.setTextSize(4);
     TFTscreen.setCursor(40, 2);
     TFTscreen.print( cbuf);
-    d_rpm_current = _rpm_current;
+    d_power_current = _power_current;
     d_rpm_color = color;
     TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
   }
@@ -855,11 +872,12 @@ void receiveEvent( int howMany) {
         howMany--;
       }
   
-      if ( rpm > RPM_MAX) _rpm_value = RPM_MAX;
-      else if ( rpm < RPM_OFF) _rpm_value = RPM_OFF;
-      else _rpm_value = rpm;
+      if ( rpm > RPM_MAX) _power_value = RPM_MAX;
+      else if ( rpm < RPM_OFF) _power_value = RPM_OFF;
+      else _power_value = rpm;
       
-      Setpoint = (double) _rpm_value;
+//      setSpindleRpm( _power_value);    
+//      setTool( tool_current, _sMode != SPINDLE_OFF, _sMode == SPINDLE_CW, _power_value);
     } else {
       uint8_t par = c & 0x0f;
       switch( c & 0x70) {
@@ -869,27 +887,33 @@ void receiveEvent( int howMany) {
             // spindle control M3/4/5
             case CMD_M3:
               _sMode = par;
-//              Setpoint = (double) _rpm_value;
+//              setSpindleRpm( _power_value);
 
               PORT_LED_TX &= !(1<< PIN_LED_TX);
               _motor_manual = false;
-              setSpindleCW( true);
-              setSpindleOn( true);
+//              setSpindleCW( true);
+//              setSpindleOn( true);
+              
+//              setTool( tool_current, true, true, _power_value);
             break;
             case CMD_M4:
               _sMode = par;
-//              Setpoint = (double) _rpm_value;
+//              setSpindleRpm( _power_value);
 
               PORT_LED_TX &= !(1<< PIN_LED_TX);
               _motor_manual = false;
-              setSpindleCW( false);
-              setSpindleOn( true);
+//              setSpindleCW( false);
+//              setSpindleOn( true);
+              
+//              setTool( tool_current, true, false, _power_value);
             break;
             case CMD_M5: 
               _sMode = par; 
-//              Setpoint = 0;
+//              setSpindleRpm( 0);
               PORT_LED_TX |= (1<< PIN_LED_TX);
-              setSpindleOn( false);
+//              setSpindleOn( false);
+              
+//              setTool( tool_current, false, true, _power_value);
             break;
             
             // tool change: M6
@@ -953,8 +977,11 @@ void receiveEvent( int howMany) {
 }
 
 void requestEvent() {
-  Wire.write( _rpm_value);
+  Wire.write( _power_value);
 }
+
+//----------------------------------------------------------------------------
+// rpm buffer
 
 void clearRpmBuffer() {
   for( uint8_t i=0; i < RPM_BUFFER; i++) {
@@ -962,8 +989,11 @@ void clearRpmBuffer() {
   }
   
   _rpm_avg_sum = 0;
-  _rpm_current = 0;
+  _power_current = 0;
 }
+
+//----------------------------------------------------------------------------
+// spindle
 
 void setSpindleOn( bool on) {
   if ( on) {
@@ -984,6 +1014,104 @@ void setSpindleCW( bool cw) {
 void setSpindlePwm( int rpv) {
   OCR3A = _rpm_pwm = rpv;
 }
+
+void setSpindleValue( int rpm) {
+  Setpoint = (double) rpm;
+}
+
+void setSpindleMode( bool on, bool cw) {
+   setSpindleCW( cw);
+   setSpindleOn( on);
+}
+
+void setSpindle( bool on, bool cw, int rpm) {
+   setSpindleValue( rpm);
+   setSpindleMode( on, cw);
+}
+
+void setLaserValue( int val) {
+  if ( val > 0x3ff) val = 0x3ff;
+  if ( val < 0) val = 0;
+  
+  laserValue = val;
+
+  if ( !laserEnabled) val = 0;
+
+  TC4H  = ( val >> 9) & 0x03;
+  OCR4A = ( val >> 1) & 0xff;
+}
+
+void setLaserMode( bool on, bool dir) {
+  laserEnabled = on;
+
+  if ( ! on) val = 0;
+  
+  setLaserValue( val);
+}
+
+void setLaser( bool on, bool dir, int val) {
+
+  if ( val > 0x3ff) val = 0x3ff;
+  if ( val < 0) val = 0;
+
+  if ( ! on) val = 0;
+  
+  setLaserValue( val);
+}
+
+void setTool( int index, bool on, bool dir, int value) {
+  if ( index == TOOL_INDEX_LASER) {
+    setSpindle( false, true, 0);
+    setLaser( on, dir, value);
+  } else {
+    setLaser( false, true, 0);
+    setSpindle( on, dir, value);
+  }
+}
+
+void setValue( int value) {
+  if ( index == TOOL_INDEX_LASER) {
+    setLaserMode( value);
+  } else {
+    setSpindleValue( value);
+  }
+}
+
+void setToolMode( bool on, bool dir) {
+  if ( index == TOOL_INDEX_LASER) {
+    setSpindle( false, true, 0);
+    setLaser( on, dir, value);
+  } else {
+    setLaser( false, true, 0);
+    setSpindle( on, dir, value);
+  }
+}
+
+void setControlValue( int current) {
+  if ( tool_curent == TOOL_INDEX_LASER) {
+    _power_current = _power_control = _power_value;    
+    setLaserValue( _power_control);
+  } else {
+    setLaserValue( 0);
+  }
+  
+  if ( tool_curent != TOOL_INDEX_LASER) {  
+    Setpoint = (double) _power_value;
+    Input = (double) _power_current;
+    myPID->Compute();
+    _power_control = (int) Output;
+    setSpindlePwm( _power_control);
+  } else {
+        
+  }
+}
+
+int getCurrentValue() {
+  return ( index == TOOL_INDEX_LASER) ? _power_current : ((uint16_t) TCNT0);
+}
+
+//----------------------------------------------------------------------------
+// coolant
 
 void setCoolantMist( bool on) {
   if ( on) PORT_COOLANT_CTRL |= (1 << PIN_COOLANT_MIST);
@@ -1067,17 +1195,17 @@ void turnDecode() {
       
       switch ( enc_states[ enc]) {
         case UP:
-          if ( _rpm_value > RPM_PWM_SCALE) _rpm_value -= RPM_PWM_SCALE;
-          else _rpm_value = RPM_OFF;
-          Setpoint = (double) _rpm_value;
+          if ( _power_value > RPM_PWM_SCALE) _power_value -= RPM_PWM_SCALE;
+          else _power_value = RPM_OFF;
+//          setSpindleRpm( _power_value);
   
           ui_update = true;
         break;
         
         case DOWN:
-          _rpm_value += RPM_PWM_SCALE;
-          if ( _rpm_value > RPM_MAX) _rpm_value = RPM_MAX;
-          Setpoint = (double) _rpm_value;
+          _power_value += RPM_PWM_SCALE;
+          if ( _power_value > RPM_MAX) _power_value = RPM_MAX;
+//          setSpindleRpm( _power_value);
   
           ui_update = true;
         break;
@@ -1102,7 +1230,7 @@ ISR( INT6_vect) {
     if (( mute & (1<< PIN_MUTE)) == LOW) {
       _motor_manual = !_motor_manual;
     }
-    setSpindleOn( _motor_manual);
+//    setSpindleOn( _motor_manual);
     
     ui_update = true;
   }
@@ -1120,12 +1248,12 @@ ISR( TIMER0_OVF) {
   
 // rpm measurement gate clock
 ISR(TIMER1_COMPA_vect) {
-  setLED( ( sys_ticks & 0x01) ? 0x3ff : (_rpm_pwm >> 1), _motor_manual, _motor_manual);
+//  setLED( ( sys_ticks & 0x01) ? 0x3ff : (_rpm_pwm >> 1), _motor_manual, _motor_manual);
   
   sys_ticks++;
   
-  uint16_t rotations = (uint16_t) TCNT0;
-
+  uint16_t rotations = getCurrentValue();
+ 
   _rpm_avg_sum -= _rpm_avg[ _rpm_avg_idx];
   _rpm_avg_sum += rotations;
 
@@ -1133,11 +1261,11 @@ ISR(TIMER1_COMPA_vect) {
   _rpm_avg_idx++;
   if ( _rpm_avg_idx >= RPM_BUFFER) _rpm_avg_idx = 0;
   
-  uint16_t last_rpm = _rpm_current;
-  _rpm_current = _rpm_avg_sum * RPM_SCALE;  // * RPM_HZ * 60 / RPM_BUFFER
+  uint16_t last_rpm = _power_current;
+  _power_current = _rpm_avg_sum * RPM_SCALE;  // * RPM_HZ * 60 / RPM_BUFFER
   TCNT0 = 0;
   
-  if ( _rpm_current != last_rpm) ui_update = true;
+  if ( _power_current != last_rpm) ui_update = true;
 
   if ( false) {
     // esc controller, implement esc enable sequence (min,max throttle)
@@ -1147,7 +1275,8 @@ ISR(TIMER1_COMPA_vect) {
         if ( ++esc_ticks >= ESC_TICKS_MIN) {
           esc_ticks = 0;
           esc_state = ESC_SETUP_MAX;
-          setSpindlePwm( SPINDLE_PWM_MAX);
+          setControlValue( SPINDLE_PWM_MAX); 
+//          setSpindlePwm( SPINDLE_PWM_MAX);
           ui_update = true;
         }
       break;
@@ -1160,28 +1289,33 @@ ISR(TIMER1_COMPA_vect) {
   
       case ESC_AUTO:
         if (_motor_manual ^ (_sMode != SPINDLE_OFF)) {
-          Input = (double) _rpm_current;
-          myPID->Compute();
-          setSpindlePwm( (int) Output);
+          setControlValue( _power_current); 
+//          Input = (double) _power_current;
+//          myPID->Compute();
+//          setSpindlePwm( (int) Output);
         } else {
-          setSpindlePwm( SPINDLE_PWM_OFF);
+          setControlValue( SPINDLE_PWM_OFF); 
+//          setSpindlePwm( SPINDLE_PWM_OFF);
         }
       break;
       
       case ESC_NC:
       default:
-        setSpindlePwm( SPINDLE_PWM_OFF);
+        setControlValue( SPINDLE_PWM_OFF); 
+//        setSpindlePwm( SPINDLE_PWM_OFF);
         ui_update = true;
     }
   } else {
     // direct mode control
     
     if (_motor_manual ^ (_sMode != SPINDLE_OFF)) {
-      Input = (double) _rpm_current;
-      myPID->Compute();
-      setSpindlePwm( (int) Output);
+          setControlValue( _power_current); 
+//      Input = (double) _power_current;
+//      myPID->Compute();
+//      setSpindlePwm( (int) Output);
     } else {
-      setSpindlePwm( SPINDLE_PWM_OFF);
+        setControlValue( SPINDLE_PWM_OFF); 
+//      setSpindlePwm( SPINDLE_PWM_OFF);
     }
   }
 }
@@ -1208,23 +1342,9 @@ ISR(TIMER3_COMPA_vect) {
     }
 }//end ISR TIM0_COMPA_vect
 */
-
+/*
 void setLED( int val, boolean doBlink, boolean freq) {
-
   TC4H  = (val >> 9) & 0x03;
   OCR4A = ( val >> 1) & 0xff;
-
-  /*
-  if ( doBlink) {
-    if ( _blinkCount <= 0) {
-      _blinkPhase = ! _blinkPhase;
-      _blinkCount = freq ? BLINK_TICKS_MANUAL : BLINK_TICKS_MASTER;
-    } else _blinkCount--;
-    
-    OCR0A = _blinkPhase ? gamma_correction( val) : 0;
-  } else {
-    OCR0A = gamma_correction( val);
-  }
-  */
 }
-
+*/
