@@ -27,15 +27,15 @@
     <BootSegment>0</BootSegment>
     <AsfFrameworkConfig>
       <framework-data>
-  <options />
-  <configurations />
-  <files />
-  <documentation help="" />
-  <offline-documentation help="" />
-  <dependencies>
-    <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.6.0" />
-  </dependencies>
-</framework-data>
+        <options />
+        <configurations />
+        <files />
+        <documentation help="" />
+        <offline-documentation help="" />
+        <dependencies>
+          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.6.0" />
+        </dependencies>
+      </framework-data>
     </AsfFrameworkConfig>
     <avrtool />
   </PropertyGroup>
@@ -52,6 +52,10 @@
           <ListValues>
             <Value>__AVR_ATmega32u4__</Value>
             <Value>__AVR_ATmega32U4__</Value>
+            <Value>USB_VID=0x2341</Value>
+            <Value>USB_PID=0x8036</Value>
+            <Value>USB_MANUFACTURER=</Value>
+            <Value>USB_PRODUCT="\"Arduino Leonardo\""</Value>
             <Value>ARDUINO=101</Value>
             <Value>ARDUINO_MAIN</Value>
             <Value>F_CPU=16000000L</Value>
@@ -63,14 +67,18 @@
           <ListValues>
             <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\cores\arduino</Value>
             <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\variants\leonardo</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire\utility</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM\utility</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\TFT\src</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\TFT\src\utility</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI\utility</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\PID_v1</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\PID_v1\utility</Value>
-            <Value>C:\Users\markus\Documents\Arduino\libraries\grbl</Value>
-            <Value>C:\Users\markus\Documents\Arduino\libraries\grbl\utility</Value>
             <Value>C:\dev\arduino-1.5.7\libraries</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\pololu\avr\libraries</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries</Value>
             <Value>C:\Program Files (x86)\Visual Micro\Visual Micro for Arduino\Micro Platforms\default\debuggers</Value>
             <Value>C:\Users\markus\Documents\Arduino\libraries</Value>
             <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\include\</Value>
@@ -91,6 +99,10 @@
           <ListValues>
             <Value>__AVR_ATmega32u4__</Value>
             <Value>__AVR_ATmega32U4__</Value>
+            <Value>USB_VID=0x2341</Value>
+            <Value>USB_PID=0x8036</Value>
+            <Value>USB_MANUFACTURER=</Value>
+            <Value>USB_PRODUCT="\"Arduino Leonardo\""</Value>
             <Value>ARDUINO=101</Value>
             <Value>ARDUINO_MAIN</Value>
             <Value>F_CPU=16000000L</Value>
@@ -102,14 +114,18 @@
           <ListValues>
             <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\cores\arduino</Value>
             <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\variants\leonardo</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire\utility</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM\utility</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\TFT\src</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\TFT\src\utility</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI\utility</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\PID_v1</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\PID_v1\utility</Value>
-            <Value>C:\Users\markus\Documents\Arduino\libraries\grbl</Value>
-            <Value>C:\Users\markus\Documents\Arduino\libraries\grbl\utility</Value>
             <Value>C:\dev\arduino-1.5.7\libraries</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\pololu\avr\libraries</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries</Value>
             <Value>C:\Program Files (x86)\Visual Micro\Visual Micro for Arduino\Micro Platforms\default\debuggers</Value>
             <Value>C:\Users\markus\Documents\Arduino\libraries</Value>
             <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\include\</Value>
@@ -132,14 +148,14 @@
     </ToolchainSettings>
     <VisualMicroSettings>
       <VisualMicroSettings>
-        <arduino.board.name>a-star32U4</arduino.board.name>
-        <arduino.board.desc>Pololu A-Star 32U4</arduino.board.desc>
-        <arduino.board.property_bag>name=Pololu A-Star 32U4
-vid.0=0x1ffb
-pid.0=0x0101
-vid.1=0x1ffb
-pid.1=0x2300
-upload.tool=arduino:avrdude
+        <arduino.board.name>leonardo</arduino.board.name>
+        <arduino.board.desc>Arduino Leonardo</arduino.board.desc>
+        <arduino.board.property_bag>name=Arduino Leonardo
+vid.0=0x2341
+pid.0=0x0036
+vid.1=0x2341
+pid.1=0x8036
+upload.tool=avrdude
 upload.protocol=avr109
 upload.maximum_size=28672
 upload.maximum_data_size=2560
@@ -147,27 +163,26 @@ upload.speed=57600
 upload.disable_flushing=true
 upload.use_1200bps_touch=true
 upload.wait_for_upload_port=true
-bootloader.tool=arduino:avrdude
+bootloader.tool=avrdude
 bootloader.low_fuses=0xff
-bootloader.high_fuses=0xd0
-bootloader.extended_fuses=0xc8
-bootloader.file=caterina/Caterina-A-Star.hex
+bootloader.high_fuses=0xd8
+bootloader.extended_fuses=0xcb
+bootloader.file=caterina/Caterina-Leonardo.hex
 bootloader.unlock_bits=0x3F
 bootloader.lock_bits=0x2F
 build.mcu=atmega32u4
 build.f_cpu=16000000L
-build.vid=0x1ffb
-build.pid=0x2300
-build.usb_product="Pololu A-Star 32U4"
-build.usb_manufacturer="Pololu Corporation"
-build.board=AVR_A_STAR_32U4
-build.core=arduino:arduino
-build.variant=arduino:leonardo
+build.vid=0x2341
+build.pid=0x8036
+build.usb_product="Arduino Leonardo"
+build.board=AVR_LEONARDO
+build.core=arduino
+build.variant=leonardo
 build.extra_flags={build.usb_flags}
 runtime.ide.path=C:\dev\arduino-1.5.7
-build.system.path=C:\dev\arduino-1.5.7\hardware\pololu\avr\system
+build.system.path=C:\dev\arduino-1.5.7\hardware\arduino\avr\system
 runtime.ide.version=157
-originalid=a-star32U4
+originalid=leonardo
 tools.atprogram.cmd.path=%AVRSTUDIO_EXE_PATH%\atbackend\atprogram
 tools.atprogram.cmd.setwinpath=true
 tools.atprogram.program.params.verbose=-v
@@ -175,6 +190,56 @@ tools.atprogram.program.params.quiet=-q
 tools.atprogram.program.pattern="{cmd.path}" -d {build.mcu} {program.verbose} {program.extra_params} program -c -f "{build.path}\{build.project_name}.hex"
 tools.atprogram.program.xpattern="{cmd.path}" {AVRSTUDIO_BACKEND_CONNECTION} -d {build.mcu} {program.verbose} {program.extra_params} program -c -f "{build.path}\{build.project_name}.hex"
 version=1.5.6
+compiler.path={runtime.ide.path}/hardware/tools/avr/bin/
+compiler.c.cmd=avr-gcc
+compiler.c.flags=-c -g -Os -w -ffunction-sections -fdata-sections -MMD
+compiler.c.elf.flags=-w -Os -Wl,--gc-sections
+compiler.c.elf.cmd=avr-gcc
+compiler.S.flags=-c -g -x assembler-with-cpp
+compiler.cpp.cmd=avr-g++
+compiler.cpp.flags=-c -g -Os -w -fno-exceptions -ffunction-sections -fdata-sections -MMD
+compiler.ar.cmd=avr-ar
+compiler.ar.flags=rcs
+compiler.objcopy.cmd=avr-objcopy
+compiler.objcopy.eep.flags=-O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0
+compiler.elf2hex.flags=-O ihex -R .eeprom
+compiler.elf2hex.cmd=avr-objcopy
+compiler.ldflags=
+compiler.size.cmd=avr-size
+compiler.c.extra_flags=
+compiler.c.elf.extra_flags=
+compiler.S.extra_flags=
+compiler.cpp.extra_flags=
+compiler.ar.extra_flags=
+compiler.objcopy.eep.extra_flags=
+compiler.elf2hex.extra_flags=
+recipe.c.o.pattern="{compiler.path}{compiler.c.cmd}" {compiler.c.flags} -mmcu={build.mcu} -DF_CPU={build.f_cpu} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.c.extra_flags} {build.extra_flags} {includes} "{source_file}" -o "{object_file}"
+recipe.cpp.o.pattern="{compiler.path}{compiler.cpp.cmd}" {compiler.cpp.flags} -mmcu={build.mcu} -DF_CPU={build.f_cpu} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} "{source_file}" -o "{object_file}"
+recipe.S.o.pattern="{compiler.path}{compiler.c.cmd}" {compiler.S.flags} -mmcu={build.mcu} -DF_CPU={build.f_cpu} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.S.extra_flags} {build.extra_flags} {includes} "{source_file}" -o "{object_file}"
+recipe.ar.pattern="{compiler.path}{compiler.ar.cmd}" {compiler.ar.flags} {compiler.ar.extra_flags} "{build.path}/{archive_file}" "{object_file}"
+recipe.c.combine.pattern="{compiler.path}{compiler.c.elf.cmd}" {compiler.c.elf.flags} -mmcu={build.mcu} {compiler.c.elf.extra_flags} -o "{build.path}/{build.project_name}.elf" {object_files} "{build.path}/{archive_file}" "-L{build.path}" -lm
+recipe.objcopy.eep.pattern="{compiler.path}{compiler.objcopy.cmd}" {compiler.objcopy.eep.flags} {compiler.objcopy.eep.extra_flags} "{build.path}/{build.project_name}.elf" "{build.path}/{build.project_name}.eep"
+recipe.objcopy.hex.pattern="{compiler.path}{compiler.elf2hex.cmd}" {compiler.elf2hex.flags} {compiler.elf2hex.extra_flags} "{build.path}/{build.project_name}.elf" "{build.path}/{build.project_name}.hex"
+recipe.size.pattern="{compiler.path}{compiler.size.cmd}" -A "{build.path}/{build.project_name}.elf"
+recipe.size.regex=^(?:\.text|\.data|\.bootloader)\s+([0-9]+).*
+recipe.size.regex.data=^(?:\.data|\.bss|\.noinit)\s+([0-9]+).*
+recipe.size.regex.eeprom=^(?:\.eeprom)\s+([0-9]+).*
+tools.avrdude.cmd.path={runtime.ide.path}/hardware/tools/avr/bin/avrdude
+tools.avrdude.config.path={runtime.ide.path}/hardware/tools/avr/etc/avrdude.conf
+tools.avrdude.upload.params.verbose=-v -v -v -v
+tools.avrdude.upload.params.quiet=-q -q
+tools.avrdude.upload.pattern="{cmd.path}" "-C{config.path}" {upload.verbose} -p{build.mcu} -c{upload.protocol} -P{serial.port} -b{upload.speed} -D "-Uflash:w:{build.path}/{build.project_name}.hex:i"
+tools.avrdude.program.params.verbose=-v -v -v -v
+tools.avrdude.program.params.quiet=-q -q
+tools.avrdude.program.pattern="{cmd.path}" "-C{config.path}" {program.verbose} -p{build.mcu} -c{protocol} {program.extra_params} "-Uflash:w:{build.path}/{build.project_name}.hex:i"
+tools.avrdude.erase.params.verbose=-v -v -v -v
+tools.avrdude.erase.params.quiet=-q -q
+tools.avrdude.erase.pattern="{cmd.path}" "-C{config.path}" {erase.verbose} -p{build.mcu} -c{protocol} {program.extra_params} -e -Ulock:w:{bootloader.unlock_bits}:m -Uefuse:w:{bootloader.extended_fuses}:m -Uhfuse:w:{bootloader.high_fuses}:m -Ulfuse:w:{bootloader.low_fuses}:m
+tools.avrdude.bootloader.params.verbose=-v -v -v -v
+tools.avrdude.bootloader.params.quiet=-q -q
+tools.avrdude.bootloader.pattern="{cmd.path}" "-C{config.path}" {bootloader.verbose} -p{build.mcu} -c{protocol} {program.extra_params} "-Uflash:w:{runtime.platform.path}/bootloaders/{bootloader.file}:i" -Ulock:w:{bootloader.lock_bits}:m
+build.usb_manufacturer=
+build.usb_flags=-DUSB_VID={build.vid} -DUSB_PID={build.pid} '-DUSB_MANUFACTURER={build.usb_manufacturer}' '-DUSB_PRODUCT={build.usb_product}'
 vm.platform.root.path=C:\Program Files (x86)\Visual Micro\Visual Micro for Arduino\Micro Platforms\arduino15x
 vm.core.include=arduino.h
 ide.hint=Arduino 1.5 Ide
@@ -205,9 +270,21 @@ ssh.host.wwwfiles.path=/www/sd
 build.working_directory={runtime.ide.path}
 ide.appid=arduino15x
 location.sketchbook=C:\Users\markus\Documents\Arduino
-vm.boardsource.path=C:\dev\arduino-1.5.7\hardware\pololu\avr
+vm.boardsource.path=C:\dev\arduino-1.5.7\hardware\arduino\avr
 vm.platformname.name=avr
 build.arch=AVR
+build.architecture=avr
+vmresolved.compiler.path=C:\dev\arduino-1.5.7\hardware\tools\avr\bin\
+vmresolved.tools.path=C:\dev\arduino-1.5.7\hardware\tools\avr
+vm.runtime.compiler.showwarnings=false
+includes= -I"C:\dev\arduino-1.5.7\hardware\arduino\avr\cores\arduino"  -I"C:\dev\arduino-1.5.7\hardware\arduino\avr\variants\leonardo"  -I"C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire"  -I"C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM"  -I"C:\dev\arduino-1.5.7\libraries\TFT\src"  -I"C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI"  -I"C:\dev\arduino-1.5.7\libraries\PID_v1"  -I"C:\dev\arduino-1.5.7\libraries"  -I"C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries"  -I"C:\Program Files (x86)\Visual Micro\Visual Micro for Arduino\Micro Platforms\default\debuggers"  -I"C:\Users\markus\Documents\Arduino\libraries"  -I"C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire\utility"
+build.path=C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo
+build.project_name=grbl_mc_leonardo
+build.variant.path=C:\dev\arduino-1.5.7\hardware\arduino\avr\variants\leonardo
+archive_file=core.a
+object_file=C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\PID_v1\PID_v1.cpp.o
+source_file=C:\dev\arduino-1.5.7\libraries\PID_v1\PID_v1.cpp
+object_files="C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\grbl_mc_leonardo.cpp.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\Wire\Wire.cpp.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\Wire\utility\twi.c.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\EEPROM\EEPROM.cpp.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\src\TFT.cpp.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\src\utility\glcdfont.c.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\src\utility\Adafruit_GFX.cpp.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\src\utility\Adafruit_ST7735.cpp.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\SPI\SPI.cpp.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\PID_v1\PID_v1.cpp.o" 
 </arduino.board.property_bag>
         <arduino.build.mcu>atmega32u4</arduino.build.mcu>
         <arduino.build.f_cpu>16000000L</arduino.build.f_cpu>
@@ -216,8 +293,9 @@ build.arch=AVR
         <arduino.upload.speed>57600</arduino.upload.speed>
         <arduino.upload.maximum_size>28672</arduino.upload.maximum_size>
         <visualmicro.application.name>arduino15x</visualmicro.application.name>
-        <visualmicro.package.name>pololu</visualmicro.package.name>
+        <visualmicro.package.name>arduino</visualmicro.package.name>
         <visualmicro.platform.name>avr</visualmicro.platform.name>
+        <arduino.upload.port>COM3</arduino.upload.port>
       </VisualMicroSettings>
     </VisualMicroSettings>
   </PropertyGroup>
@@ -234,6 +312,10 @@ build.arch=AVR
           <ListValues>
             <Value>__AVR_ATmega32u4__</Value>
             <Value>__AVR_ATmega32U4__</Value>
+            <Value>USB_VID=0x2341</Value>
+            <Value>USB_PID=0x8036</Value>
+            <Value>USB_MANUFACTURER=</Value>
+            <Value>USB_PRODUCT="\"Arduino Leonardo\""</Value>
             <Value>ARDUINO=101</Value>
             <Value>ARDUINO_MAIN</Value>
             <Value>F_CPU=16000000L</Value>
@@ -245,14 +327,18 @@ build.arch=AVR
           <ListValues>
             <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\cores\arduino</Value>
             <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\variants\leonardo</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire\utility</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM\utility</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\TFT\src</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\TFT\src\utility</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI\utility</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\PID_v1</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\PID_v1\utility</Value>
-            <Value>C:\Users\markus\Documents\Arduino\libraries\grbl</Value>
-            <Value>C:\Users\markus\Documents\Arduino\libraries\grbl\utility</Value>
             <Value>C:\dev\arduino-1.5.7\libraries</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\pololu\avr\libraries</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries</Value>
             <Value>C:\Program Files (x86)\Visual Micro\Visual Micro for Arduino\Micro Platforms\default\debuggers</Value>
             <Value>C:\Users\markus\Documents\Arduino\libraries</Value>
             <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\include\</Value>
@@ -273,6 +359,10 @@ build.arch=AVR
           <ListValues>
             <Value>__AVR_ATmega32u4__</Value>
             <Value>__AVR_ATmega32U4__</Value>
+            <Value>USB_VID=0x2341</Value>
+            <Value>USB_PID=0x8036</Value>
+            <Value>USB_MANUFACTURER=</Value>
+            <Value>USB_PRODUCT="\"Arduino Leonardo\""</Value>
             <Value>ARDUINO=101</Value>
             <Value>ARDUINO_MAIN</Value>
             <Value>F_CPU=16000000L</Value>
@@ -284,14 +374,18 @@ build.arch=AVR
           <ListValues>
             <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\cores\arduino</Value>
             <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\variants\leonardo</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire\utility</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM\utility</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\TFT\src</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\TFT\src\utility</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI\utility</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\PID_v1</Value>
             <Value>C:\dev\arduino-1.5.7\libraries\PID_v1\utility</Value>
-            <Value>C:\Users\markus\Documents\Arduino\libraries\grbl</Value>
-            <Value>C:\Users\markus\Documents\Arduino\libraries\grbl\utility</Value>
             <Value>C:\dev\arduino-1.5.7\libraries</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\pololu\avr\libraries</Value>
+            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries</Value>
             <Value>C:\Program Files (x86)\Visual Micro\Visual Micro for Arduino\Micro Platforms\default\debuggers</Value>
             <Value>C:\Users\markus\Documents\Arduino\libraries</Value>
             <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\include\</Value>
@@ -314,14 +408,14 @@ build.arch=AVR
     </ToolchainSettings>
     <VisualMicroSettings>
       <VisualMicroSettings>
-        <arduino.board.name>a-star32U4</arduino.board.name>
-        <arduino.board.desc>Pololu A-Star 32U4</arduino.board.desc>
-        <arduino.board.property_bag>name=Pololu A-Star 32U4
-vid.0=0x1ffb
-pid.0=0x0101
-vid.1=0x1ffb
-pid.1=0x2300
-upload.tool=arduino:avrdude
+        <arduino.board.name>leonardo</arduino.board.name>
+        <arduino.board.desc>Arduino Leonardo</arduino.board.desc>
+        <arduino.board.property_bag>name=Arduino Leonardo
+vid.0=0x2341
+pid.0=0x0036
+vid.1=0x2341
+pid.1=0x8036
+upload.tool=avrdude
 upload.protocol=avr109
 upload.maximum_size=28672
 upload.maximum_data_size=2560
@@ -329,27 +423,26 @@ upload.speed=57600
 upload.disable_flushing=true
 upload.use_1200bps_touch=true
 upload.wait_for_upload_port=true
-bootloader.tool=arduino:avrdude
+bootloader.tool=avrdude
 bootloader.low_fuses=0xff
-bootloader.high_fuses=0xd0
-bootloader.extended_fuses=0xc8
-bootloader.file=caterina/Caterina-A-Star.hex
+bootloader.high_fuses=0xd8
+bootloader.extended_fuses=0xcb
+bootloader.file=caterina/Caterina-Leonardo.hex
 bootloader.unlock_bits=0x3F
 bootloader.lock_bits=0x2F
 build.mcu=atmega32u4
 build.f_cpu=16000000L
-build.vid=0x1ffb
-build.pid=0x2300
-build.usb_product="Pololu A-Star 32U4"
-build.usb_manufacturer="Pololu Corporation"
-build.board=AVR_A_STAR_32U4
-build.core=arduino:arduino
-build.variant=arduino:leonardo
+build.vid=0x2341
+build.pid=0x8036
+build.usb_product="Arduino Leonardo"
+build.board=AVR_LEONARDO
+build.core=arduino
+build.variant=leonardo
 build.extra_flags={build.usb_flags}
 runtime.ide.path=C:\dev\arduino-1.5.7
-build.system.path=C:\dev\arduino-1.5.7\hardware\pololu\avr\system
+build.system.path=C:\dev\arduino-1.5.7\hardware\arduino\avr\system
 runtime.ide.version=157
-originalid=a-star32U4
+originalid=leonardo
 tools.atprogram.cmd.path=%AVRSTUDIO_EXE_PATH%\atbackend\atprogram
 tools.atprogram.cmd.setwinpath=true
 tools.atprogram.program.params.verbose=-v
@@ -357,6 +450,56 @@ tools.atprogram.program.params.quiet=-q
 tools.atprogram.program.pattern="{cmd.path}" -d {build.mcu} {program.verbose} {program.extra_params} program -c -f "{build.path}\{build.project_name}.hex"
 tools.atprogram.program.xpattern="{cmd.path}" {AVRSTUDIO_BACKEND_CONNECTION} -d {build.mcu} {program.verbose} {program.extra_params} program -c -f "{build.path}\{build.project_name}.hex"
 version=1.5.6
+compiler.path={runtime.ide.path}/hardware/tools/avr/bin/
+compiler.c.cmd=avr-gcc
+compiler.c.flags=-c -g -Os -w -ffunction-sections -fdata-sections -MMD
+compiler.c.elf.flags=-w -Os -Wl,--gc-sections
+compiler.c.elf.cmd=avr-gcc
+compiler.S.flags=-c -g -x assembler-with-cpp
+compiler.cpp.cmd=avr-g++
+compiler.cpp.flags=-c -g -Os -w -fno-exceptions -ffunction-sections -fdata-sections -MMD
+compiler.ar.cmd=avr-ar
+compiler.ar.flags=rcs
+compiler.objcopy.cmd=avr-objcopy
+compiler.objcopy.eep.flags=-O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0
+compiler.elf2hex.flags=-O ihex -R .eeprom
+compiler.elf2hex.cmd=avr-objcopy
+compiler.ldflags=
+compiler.size.cmd=avr-size
+compiler.c.extra_flags=
+compiler.c.elf.extra_flags=
+compiler.S.extra_flags=
+compiler.cpp.extra_flags=
+compiler.ar.extra_flags=
+compiler.objcopy.eep.extra_flags=
+compiler.elf2hex.extra_flags=
+recipe.c.o.pattern="{compiler.path}{compiler.c.cmd}" {compiler.c.flags} -mmcu={build.mcu} -DF_CPU={build.f_cpu} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.c.extra_flags} {build.extra_flags} {includes} "{source_file}" -o "{object_file}"
+recipe.cpp.o.pattern="{compiler.path}{compiler.cpp.cmd}" {compiler.cpp.flags} -mmcu={build.mcu} -DF_CPU={build.f_cpu} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} "{source_file}" -o "{object_file}"
+recipe.S.o.pattern="{compiler.path}{compiler.c.cmd}" {compiler.S.flags} -mmcu={build.mcu} -DF_CPU={build.f_cpu} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.S.extra_flags} {build.extra_flags} {includes} "{source_file}" -o "{object_file}"
+recipe.ar.pattern="{compiler.path}{compiler.ar.cmd}" {compiler.ar.flags} {compiler.ar.extra_flags} "{build.path}/{archive_file}" "{object_file}"
+recipe.c.combine.pattern="{compiler.path}{compiler.c.elf.cmd}" {compiler.c.elf.flags} -mmcu={build.mcu} {compiler.c.elf.extra_flags} -o "{build.path}/{build.project_name}.elf" {object_files} "{build.path}/{archive_file}" "-L{build.path}" -lm
+recipe.objcopy.eep.pattern="{compiler.path}{compiler.objcopy.cmd}" {compiler.objcopy.eep.flags} {compiler.objcopy.eep.extra_flags} "{build.path}/{build.project_name}.elf" "{build.path}/{build.project_name}.eep"
+recipe.objcopy.hex.pattern="{compiler.path}{compiler.elf2hex.cmd}" {compiler.elf2hex.flags} {compiler.elf2hex.extra_flags} "{build.path}/{build.project_name}.elf" "{build.path}/{build.project_name}.hex"
+recipe.size.pattern="{compiler.path}{compiler.size.cmd}" -A "{build.path}/{build.project_name}.elf"
+recipe.size.regex=^(?:\.text|\.data|\.bootloader)\s+([0-9]+).*
+recipe.size.regex.data=^(?:\.data|\.bss|\.noinit)\s+([0-9]+).*
+recipe.size.regex.eeprom=^(?:\.eeprom)\s+([0-9]+).*
+tools.avrdude.cmd.path={runtime.ide.path}/hardware/tools/avr/bin/avrdude
+tools.avrdude.config.path={runtime.ide.path}/hardware/tools/avr/etc/avrdude.conf
+tools.avrdude.upload.params.verbose=-v -v -v -v
+tools.avrdude.upload.params.quiet=-q -q
+tools.avrdude.upload.pattern="{cmd.path}" "-C{config.path}" {upload.verbose} -p{build.mcu} -c{upload.protocol} -P{serial.port} -b{upload.speed} -D "-Uflash:w:{build.path}/{build.project_name}.hex:i"
+tools.avrdude.program.params.verbose=-v -v -v -v
+tools.avrdude.program.params.quiet=-q -q
+tools.avrdude.program.pattern="{cmd.path}" "-C{config.path}" {program.verbose} -p{build.mcu} -c{protocol} {program.extra_params} "-Uflash:w:{build.path}/{build.project_name}.hex:i"
+tools.avrdude.erase.params.verbose=-v -v -v -v
+tools.avrdude.erase.params.quiet=-q -q
+tools.avrdude.erase.pattern="{cmd.path}" "-C{config.path}" {erase.verbose} -p{build.mcu} -c{protocol} {program.extra_params} -e -Ulock:w:{bootloader.unlock_bits}:m -Uefuse:w:{bootloader.extended_fuses}:m -Uhfuse:w:{bootloader.high_fuses}:m -Ulfuse:w:{bootloader.low_fuses}:m
+tools.avrdude.bootloader.params.verbose=-v -v -v -v
+tools.avrdude.bootloader.params.quiet=-q -q
+tools.avrdude.bootloader.pattern="{cmd.path}" "-C{config.path}" {bootloader.verbose} -p{build.mcu} -c{protocol} {program.extra_params} "-Uflash:w:{runtime.platform.path}/bootloaders/{bootloader.file}:i" -Ulock:w:{bootloader.lock_bits}:m
+build.usb_manufacturer=
+build.usb_flags=-DUSB_VID={build.vid} -DUSB_PID={build.pid} '-DUSB_MANUFACTURER={build.usb_manufacturer}' '-DUSB_PRODUCT={build.usb_product}'
 vm.platform.root.path=C:\Program Files (x86)\Visual Micro\Visual Micro for Arduino\Micro Platforms\arduino15x
 vm.core.include=arduino.h
 ide.hint=Arduino 1.5 Ide
@@ -387,9 +530,21 @@ ssh.host.wwwfiles.path=/www/sd
 build.working_directory={runtime.ide.path}
 ide.appid=arduino15x
 location.sketchbook=C:\Users\markus\Documents\Arduino
-vm.boardsource.path=C:\dev\arduino-1.5.7\hardware\pololu\avr
+vm.boardsource.path=C:\dev\arduino-1.5.7\hardware\arduino\avr
 vm.platformname.name=avr
 build.arch=AVR
+build.architecture=avr
+vmresolved.compiler.path=C:\dev\arduino-1.5.7\hardware\tools\avr\bin\
+vmresolved.tools.path=C:\dev\arduino-1.5.7\hardware\tools\avr
+vm.runtime.compiler.showwarnings=false
+includes= -I"C:\dev\arduino-1.5.7\hardware\arduino\avr\cores\arduino"  -I"C:\dev\arduino-1.5.7\hardware\arduino\avr\variants\leonardo"  -I"C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire"  -I"C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM"  -I"C:\dev\arduino-1.5.7\libraries\TFT\src"  -I"C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI"  -I"C:\dev\arduino-1.5.7\libraries\PID_v1"  -I"C:\dev\arduino-1.5.7\libraries"  -I"C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries"  -I"C:\Program Files (x86)\Visual Micro\Visual Micro for Arduino\Micro Platforms\default\debuggers"  -I"C:\Users\markus\Documents\Arduino\libraries"  -I"C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire\utility"
+build.path=C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo
+build.project_name=grbl_mc_leonardo
+build.variant.path=C:\dev\arduino-1.5.7\hardware\arduino\avr\variants\leonardo
+archive_file=core.a
+object_file=C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\PID_v1\PID_v1.cpp.o
+source_file=C:\dev\arduino-1.5.7\libraries\PID_v1\PID_v1.cpp
+object_files="C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\grbl_mc_leonardo.cpp.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\Wire\Wire.cpp.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\Wire\utility\twi.c.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\EEPROM\EEPROM.cpp.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\src\TFT.cpp.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\src\utility\glcdfont.c.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\src\utility\Adafruit_GFX.cpp.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\src\utility\Adafruit_ST7735.cpp.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\SPI\SPI.cpp.o" "C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonardo\leonardo\PID_v1\PID_v1.cpp.o" 
 </arduino.board.property_bag>
         <arduino.build.mcu>atmega32u4</arduino.build.mcu>
         <arduino.build.f_cpu>16000000L</arduino.build.f_cpu>
@@ -398,8 +553,9 @@ build.arch=AVR
         <arduino.upload.speed>57600</arduino.upload.speed>
         <arduino.upload.maximum_size>28672</arduino.upload.maximum_size>
         <visualmicro.application.name>arduino15x</visualmicro.application.name>
-        <visualmicro.package.name>pololu</visualmicro.package.name>
+        <visualmicro.package.name>arduino</visualmicro.package.name>
         <visualmicro.platform.name>avr</visualmicro.platform.name>
+        <arduino.upload.port>COM3</arduino.upload.port>
       </VisualMicroSettings>
     </VisualMicroSettings>
   </PropertyGroup>

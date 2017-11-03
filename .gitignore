@@ -18,6 +18,10 @@ $RECYCLE.BIN/
 # Operating System Files
 # =========================
 
+Debug/*
+Visual Micro/*
+Visual Micro/\.*
+
 # OSX
 # =========================
 
