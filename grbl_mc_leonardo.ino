@@ -16,7 +16,7 @@
   - uses IDLE sleep mode
 */
 
-#define F_CPU 16000000UL  // 16 MHz
+//#define F_CPU 16000000UL  // 16 MHz
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -105,6 +105,13 @@
 #define PORT_COOLANT_CTRL  PORTD
 #define PIN_COOLANT_MIST   PD4
 #define PIN_COOLANT_FLOOD  PD1
+
+#define PINB_LASER_CTRL	PINF
+#define DIR_LASER_CTRL	DDRF
+#define PORT_LASER_CTRL	PORTF
+
+#define PIN_LASER_DIS	PF1
+#define PIN_SAFETY		PF0
 /*
 #define DIR_LASER_CTRL   DDRC
 #define PORT_LASER_CTRL  PORTC
@@ -221,7 +228,7 @@ volatile uint16_t _rpm_avg[RPM_BUFFER];
 volatile uint8_t _rpm_avg_idx = 0;
 volatile uint16_t _rpm_avg_sum = 0;
 
-volatile int d_rpm_pwm = -1;
+volatile uint16_t d_rpm_pwm = -1;
 
 volatile boolean manual_override = false;
 volatile boolean d_motor_manual = false;
@@ -229,8 +236,8 @@ volatile boolean d_motor_manual = false;
 int d_sMode = SPINDLE_OFF;
 
 bool setup_rpm = true;
-int d_power_value = -1;
-int d_power_current = -1;
+uint16_t d_power_value = -1;
+uint16_t d_power_current = -1;
 uint16_t d_rpm_color = 0;
 
 bool mcLaserOn = false;
@@ -261,9 +268,9 @@ struct toolState {
 
 struct spindleState {
 	volatile uint8_t mode;
-	volatile int rpm;
-	volatile int rpm_current, rpm_control;
-	int (*transfer)( int set, int current);
+	volatile uint16_t rpm;
+	volatile uint16_t rpm_current, rpm_control;
+	uint16_t (*transfer)( uint16_t set, uint16_t current);
 };
 
 struct pidParms {
@@ -275,9 +282,9 @@ union xtraUnion {
 } xtraParms;
 
 struct toolControl {
-	int minimum, maximum, increment;
-	int min, max, period;
-	int (*transfer)( int set, int current);
+	uint16_t minimum, maximum, increment;
+	uint16_t min, max, period;
+	uint16_t (*transfer)( uint16_t set, uint16_t current);
 	xtraUnion params;
 };
 
@@ -424,9 +431,14 @@ void setup( void) {
   DIR_LED_TX |= (1<< PIN_LED_TX);      // set Pc7 as output
   PORT_LED_TX |= (1<< PIN_LED_TX);
 
+  DIR_LASER_CTRL |= (1<< PIN_LASER_DIS);
+  PORT_LASER_CTRL |= (1<< PIN_LASER_DIS);  // disable laser
+
+  DIR_LASER_CTRL &= ~(1<< PIN_SAFETY);
+
   // set spares to input
 //  DDRC &= ~(1<< PC7);                // high
-  DDRF &= ~((1<< PF1) || (1<< PF0));                // high
+//  DDRF &= ~((1<< PF1) || (1<< PF0));                // high
 //  DDRD &= ~((1<< PD4) || (1<< PD1) || (1<< PD0)); // high
 
   // enable pin-change interrupts for up/down/mute sources
@@ -917,7 +929,7 @@ void updateMessage() {
 // handle i2c protocol
   
 void receiveEvent( int howMany) {
-  int rpm = 0; // receive byte as a character
+  uint16_t rpm = 0; // receive byte as a character
   uint8_t c = 0;
 
   while ( howMany > 0) {    
@@ -1094,9 +1106,6 @@ void setSpindle( int mode, int rpm) {
 // laser
 
 void setLaserValue( int val) {
-      Serial.print( "lsr ");
-      Serial.print( val);
-      Serial.println( " pwr");
 
   if ( val > 0x3ff) val = 0x3ff;
   if ( val < 0) val = 0;
@@ -1120,10 +1129,14 @@ void setLaser( int mode, int val) {
 		case SPINDLE_CW:
 			mcLaserOn = true;
 			setLaserValue( val);
+
+			PORT_SPINDLE_CTRL &= ~(1 << PIN_SPINDLE_EN);
 		break;
 
 		case SPINDLE_OFF:
-			mcLaserOn = false;
+			mcLaserOn = false;			
+			PORT_SPINDLE_CTRL |= (1 << PIN_SPINDLE_EN);
+			
 			setLaserValue( 0);
 		break;
 	}
@@ -1185,7 +1198,7 @@ void mcToolMode( int mode) {
 	}
 }
 
-void mcToolValue( int set, int current) {
+void mcToolValue( uint16_t set, uint16_t current) {
 	bool isOn = (manual_override ^ (state->spindle.mode != SPINDLE_OFF));
 
     ui_update |= (state->spindle.rpm != set);
@@ -1195,7 +1208,7 @@ void mcToolValue( int set, int current) {
 
 	state->spindle.rpm_current = current;
 
-	int control = state->spindle.transfer( set, current);
+	uint16_t control = state->spindle.transfer( set, current);
 
 	ui_update |= (state->spindle.rpm_control != control);
 	state->spindle.rpm_control = isOn ? control : 0;
@@ -1204,7 +1217,7 @@ void mcToolValue( int set, int current) {
 }
 
 void mcStepValueUp() {
-	int temp = state->spindle.rpm + tcCurrent->increment;
+	uint16_t temp = state->spindle.rpm + tcCurrent->increment;
 	if ( temp > tcCurrent->maximum) temp = tcCurrent->maximum;
 	state->spindle.rpm = temp;
 
@@ -1234,14 +1247,14 @@ int getCurrentValue() {
 //-------------------------------------------------------------------------
 // transfer functions
 
-int transferPID( int set, int current) {
+uint16_t transferPID( uint16_t set, uint16_t current) {
 	Setpoint = (double) set;
     Input = (double) current;
     myPID->Compute();
     return (int) Output;
 }
 
-int transferLSR( int set, int current) {
+uint16_t transferLSR( uint16_t set, uint16_t current) {
 	if ( set > 0x3ff) set = 0x3ff;
 	if ( set < 0) set = 0;
 
