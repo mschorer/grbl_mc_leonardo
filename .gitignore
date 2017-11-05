@@ -19,8 +19,10 @@ $RECYCLE.BIN/
 # =========================
 
 Debug/*
+Release/*
 Visual Micro/*
-Visual Micro/\.*
+__vm/*
+.vs/*
 
 # OSX
 # =========================

@@ -2,7 +2,7 @@
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectVersion>6.2</ProjectVersion>
+    <ProjectVersion>7.0</ProjectVersion>
     <ToolchainName>com.Atmel.AVRGCC8.CPP</ToolchainName>
     <ProjectGuid>{07b459b4-8d76-4638-bc6d-a459ba2d616b}</ProjectGuid>
     <avrdevice>ATmega32U4</avrdevice>
@@ -33,118 +33,113 @@
         <documentation help="" />
         <offline-documentation help="" />
         <dependencies>
-          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.6.0" />
+          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.26.0" />
         </dependencies>
       </framework-data>
     </AsfFrameworkConfig>
     <avrtool />
+    <preserveEEPROM>true</preserveEEPROM>
+    <ResetRule>0</ResetRule>
+    <EraseKey />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <ToolchainSettings>
       <AvrGccCpp>
-        <avrgcc.common.outputfiles.hex>True</avrgcc.common.outputfiles.hex>
-        <avrgcc.common.outputfiles.lss>True</avrgcc.common.outputfiles.lss>
-        <avrgcc.common.outputfiles.eep>True</avrgcc.common.outputfiles.eep>
-        <avrgcc.common.outputfiles.srec>True</avrgcc.common.outputfiles.srec>
-        <avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>
-        <avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>
-        <avrgcc.compiler.symbols.DefSymbols>
-          <ListValues>
-            <Value>__AVR_ATmega32u4__</Value>
-            <Value>__AVR_ATmega32U4__</Value>
-            <Value>USB_VID=0x2341</Value>
-            <Value>USB_PID=0x8036</Value>
-            <Value>USB_MANUFACTURER=</Value>
-            <Value>USB_PRODUCT="\"Arduino Leonardo\""</Value>
-            <Value>ARDUINO=101</Value>
-            <Value>ARDUINO_MAIN</Value>
-            <Value>F_CPU=16000000L</Value>
-            <Value>__AVR__</Value>
-            <Value>__cplusplus</Value>
-          </ListValues>
-        </avrgcc.compiler.symbols.DefSymbols>
-        <avrgcc.compiler.directories.IncludePaths>
-          <ListValues>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\cores\arduino</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\variants\leonardo</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\TFT\src</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\TFT\src\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\PID_v1</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\PID_v1\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries</Value>
-            <Value>C:\Program Files (x86)\Visual Micro\Visual Micro for Arduino\Micro Platforms\default\debuggers</Value>
-            <Value>C:\Users\markus\Documents\Arduino\libraries</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\include\</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\include\avr\</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\lib\gcc\avr\4.3.2\include\</Value>
-          </ListValues>
-        </avrgcc.compiler.directories.IncludePaths>
-        <avrgcc.compiler.optimization.level>Optimize (-O1)</avrgcc.compiler.optimization.level>
-        <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
-        <avrgcc.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcc.compiler.optimization.AllocateBytesNeededForEnum>
-        <avrgcc.compiler.optimization.DebugLevel>Default (-g2)</avrgcc.compiler.optimization.DebugLevel>
-        <avrgcc.compiler.warnings.AllWarnings>True</avrgcc.compiler.warnings.AllWarnings>
-        <avrgcc.compiler.miscellaneous.OtherFlags>-std=gnu99 -include=arduino.h</avrgcc.compiler.miscellaneous.OtherFlags>
-        <avrgcccpp.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcccpp.compiler.general.ChangeDefaultCharTypeUnsigned>
-        <avrgcccpp.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcccpp.compiler.general.ChangeDefaultBitFieldUnsigned>
-        <avrgcccpp.compiler.symbols.DefSymbols>
-          <ListValues>
-            <Value>__AVR_ATmega32u4__</Value>
-            <Value>__AVR_ATmega32U4__</Value>
-            <Value>USB_VID=0x2341</Value>
-            <Value>USB_PID=0x8036</Value>
-            <Value>USB_MANUFACTURER=</Value>
-            <Value>USB_PRODUCT="\"Arduino Leonardo\""</Value>
-            <Value>ARDUINO=101</Value>
-            <Value>ARDUINO_MAIN</Value>
-            <Value>F_CPU=16000000L</Value>
-            <Value>__AVR__</Value>
-            <Value>__cplusplus</Value>
-          </ListValues>
-        </avrgcccpp.compiler.symbols.DefSymbols>
-        <avrgcccpp.compiler.directories.IncludePaths>
-          <ListValues>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\cores\arduino</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\variants\leonardo</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\TFT\src</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\TFT\src\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\PID_v1</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\PID_v1\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries</Value>
-            <Value>C:\Program Files (x86)\Visual Micro\Visual Micro for Arduino\Micro Platforms\default\debuggers</Value>
-            <Value>C:\Users\markus\Documents\Arduino\libraries</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\include\</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\include\avr\</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\lib\gcc\avr\4.3.2\include\</Value>
-            <Value>
-            </Value>
-          </ListValues>
-        </avrgcccpp.compiler.directories.IncludePaths>
-        <avrgcccpp.compiler.optimization.level>Optimize (-O1)</avrgcccpp.compiler.optimization.level>
-        <avrgcccpp.compiler.optimization.PackStructureMembers>True</avrgcccpp.compiler.optimization.PackStructureMembers>
-        <avrgcccpp.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcccpp.compiler.optimization.AllocateBytesNeededForEnum>
-        <avrgcccpp.compiler.optimization.DebugLevel>Default (-g2)</avrgcccpp.compiler.optimization.DebugLevel>
-        <avrgcccpp.compiler.warnings.AllWarnings>True</avrgcccpp.compiler.warnings.AllWarnings>
-        <avrgcccpp.compiler.miscellaneous.OtherFlags>-include=arduino.h</avrgcccpp.compiler.miscellaneous.OtherFlags>
-        <avrgcccpp.linker.memorysettings.Comment>&lt;segmentname&gt;=&lt;address&gt;, for example  .boot=0xff</avrgcccpp.linker.memorysettings.Comment>
-        <avrgcccpp.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcccpp.assembler.debugging.DebugLevel>
-      </AvrGccCpp>
+  <avrgcc.common.Device>-mmcu=atmega32u4 -B "%24(PackRepoDir)\atmel\ATmega_DFP\1.2.150\gcc\dev\atmega32u4"</avrgcc.common.Device>
+  <avrgcc.common.outputfiles.hex>True</avrgcc.common.outputfiles.hex>
+  <avrgcc.common.outputfiles.lss>True</avrgcc.common.outputfiles.lss>
+  <avrgcc.common.outputfiles.eep>True</avrgcc.common.outputfiles.eep>
+  <avrgcc.common.outputfiles.srec>True</avrgcc.common.outputfiles.srec>
+  <avrgcc.common.outputfiles.usersignatures>False</avrgcc.common.outputfiles.usersignatures>
+  <avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>
+  <avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>
+  <avrgcc.compiler.symbols.DefSymbols>
+    <ListValues>
+      <Value>__AVR_ATmega32u4__</Value>
+      <Value>__AVR_ATmega32U4__</Value>
+      <Value>ARDUINO=157</Value>
+      <Value>ARDUINO_MAIN</Value>
+      <Value>F_CPU=16000000L</Value>
+      <Value>__AVR__</Value>
+      <Value>ARDUINO_AVR_LEONARDO</Value>
+      <Value>ARDUINO_ARCH_AVR</Value>
+      <Value>USB_VID=0x2341</Value>
+      <Value>USB_PID=0x8036</Value>
+      <Value>USB_MANUFACTURER=</Value>
+    </ListValues>
+  </avrgcc.compiler.symbols.DefSymbols>
+  <avrgcc.compiler.directories.IncludePaths>
+    <ListValues>
+      <Value>../../../grbl_mc_leonardo</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/EEPROM</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries/PID_v1</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/SPI</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries/TFT/src</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries/TFT/src/utility</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire/utility</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries</Value>
+      <Value>C:/Users/markus/Documents/Arduino/libraries</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/cores/arduino</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/variants/leonardo</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino</Value>
+    </ListValues>
+  </avrgcc.compiler.directories.IncludePaths>
+  <avrgcc.compiler.optimization.level>Optimize (-O1)</avrgcc.compiler.optimization.level>
+  <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
+  <avrgcc.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcc.compiler.optimization.AllocateBytesNeededForEnum>
+  <avrgcc.compiler.optimization.DebugLevel>Default (-g2)</avrgcc.compiler.optimization.DebugLevel>
+  <avrgcc.compiler.warnings.AllWarnings>True</avrgcc.compiler.warnings.AllWarnings>
+  <avrgcc.compiler.miscellaneous.OtherFlags>-std=gnu99 -include=arduino.h</avrgcc.compiler.miscellaneous.OtherFlags>
+  <avrgcccpp.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcccpp.compiler.general.ChangeDefaultCharTypeUnsigned>
+  <avrgcccpp.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcccpp.compiler.general.ChangeDefaultBitFieldUnsigned>
+  <avrgcccpp.compiler.symbols.DefSymbols>
+    <ListValues>
+      <Value>__AVR_ATmega32u4__</Value>
+      <Value>__AVR_ATmega32U4__</Value>
+      <Value>ARDUINO=157</Value>
+      <Value>ARDUINO_MAIN</Value>
+      <Value>F_CPU=16000000L</Value>
+      <Value>__AVR__</Value>
+      <Value>ARDUINO_AVR_LEONARDO</Value>
+      <Value>ARDUINO_ARCH_AVR</Value>
+      <Value>USB_VID=0x2341</Value>
+      <Value>USB_PID=0x8036</Value>
+      <Value>USB_MANUFACTURER=</Value>
+    </ListValues>
+  </avrgcccpp.compiler.symbols.DefSymbols>
+  <avrgcccpp.compiler.directories.IncludePaths>
+    <ListValues>
+      <Value>../../../grbl_mc_leonardo</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/EEPROM</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries/PID_v1</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/SPI</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries/TFT/src</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries/TFT/src/utility</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire/utility</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries</Value>
+      <Value>C:/Users/markus/Documents/Arduino/libraries</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/cores/arduino</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/variants/leonardo</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino</Value>
+    </ListValues>
+  </avrgcccpp.compiler.directories.IncludePaths>
+  <avrgcccpp.compiler.optimization.level>Optimize (-O1)</avrgcccpp.compiler.optimization.level>
+  <avrgcccpp.compiler.optimization.PackStructureMembers>True</avrgcccpp.compiler.optimization.PackStructureMembers>
+  <avrgcccpp.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcccpp.compiler.optimization.AllocateBytesNeededForEnum>
+  <avrgcccpp.compiler.optimization.DebugLevel>Default (-g2)</avrgcccpp.compiler.optimization.DebugLevel>
+  <avrgcccpp.compiler.warnings.AllWarnings>True</avrgcccpp.compiler.warnings.AllWarnings>
+  <avrgcccpp.compiler.miscellaneous.OtherFlags>-include=arduino.h</avrgcccpp.compiler.miscellaneous.OtherFlags>
+  <avrgcccpp.assembler.general.IncludePaths>
+    <ListValues>
+      <Value>%24(PackRepoDir)\atmel\ATmega_DFP\1.2.150\include</Value>
+    </ListValues>
+  </avrgcccpp.assembler.general.IncludePaths>
+  <avrgcccpp.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcccpp.assembler.debugging.DebugLevel>
+</AvrGccCpp>
     </ToolchainSettings>
     <VisualMicroSettings>
       <VisualMicroSettings>
@@ -295,116 +290,110 @@ object_files="C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonar
         <visualmicro.application.name>arduino15x</visualmicro.application.name>
         <visualmicro.package.name>arduino</visualmicro.package.name>
         <visualmicro.platform.name>avr</visualmicro.platform.name>
-        <arduino.upload.port>COM3</arduino.upload.port>
+        <arduino.upload.port>COM6</arduino.upload.port>
+        <vm.upload.useprogrammer>1</vm.upload.useprogrammer>
       </VisualMicroSettings>
     </VisualMicroSettings>
+    <VMSETTING_IncludePaths>../../../grbl_mc_leonardo;C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/EEPROM;C:/dev/arduino-1.5.7/libraries/PID_v1;C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/SPI;C:/dev/arduino-1.5.7/libraries/TFT/src;C:/dev/arduino-1.5.7/libraries/TFT/src/utility;C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire;C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire/utility;C:/dev/arduino-1.5.7/libraries;C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries;C:/Users/markus/Documents/Arduino/libraries;C:/dev/arduino-1.5.7/hardware/arduino/avr/cores/arduino;C:/dev/arduino-1.5.7/hardware/arduino/avr/variants/leonardo;c:/dev/arduino-1.5.7/hardware/tools/avr/avr/include/;c:/dev/arduino-1.5.7/hardware/tools/avr/avr/include/avr/;c:/dev/arduino-1.5.7/hardware/tools/avr/avr/;C:/dev/arduino-1.5.7/hardware/arduino;</VMSETTING_IncludePaths>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <ToolchainSettings>
       <AvrGccCpp>
-        <avrgcc.common.outputfiles.hex>True</avrgcc.common.outputfiles.hex>
-        <avrgcc.common.outputfiles.lss>True</avrgcc.common.outputfiles.lss>
-        <avrgcc.common.outputfiles.eep>True</avrgcc.common.outputfiles.eep>
-        <avrgcc.common.outputfiles.srec>True</avrgcc.common.outputfiles.srec>
-        <avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>
-        <avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>
-        <avrgcc.compiler.symbols.DefSymbols>
-          <ListValues>
-            <Value>__AVR_ATmega32u4__</Value>
-            <Value>__AVR_ATmega32U4__</Value>
-            <Value>USB_VID=0x2341</Value>
-            <Value>USB_PID=0x8036</Value>
-            <Value>USB_MANUFACTURER=</Value>
-            <Value>USB_PRODUCT="\"Arduino Leonardo\""</Value>
-            <Value>ARDUINO=101</Value>
-            <Value>ARDUINO_MAIN</Value>
-            <Value>F_CPU=16000000L</Value>
-            <Value>__AVR__</Value>
-            <Value>__cplusplus</Value>
-          </ListValues>
-        </avrgcc.compiler.symbols.DefSymbols>
-        <avrgcc.compiler.directories.IncludePaths>
-          <ListValues>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\cores\arduino</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\variants\leonardo</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\TFT\src</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\TFT\src\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\PID_v1</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\PID_v1\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries</Value>
-            <Value>C:\Program Files (x86)\Visual Micro\Visual Micro for Arduino\Micro Platforms\default\debuggers</Value>
-            <Value>C:\Users\markus\Documents\Arduino\libraries</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\include\</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\include\avr\</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\lib\gcc\avr\4.3.2\include\</Value>
-          </ListValues>
-        </avrgcc.compiler.directories.IncludePaths>
-        <avrgcc.compiler.optimization.level>Optimize (-O1)</avrgcc.compiler.optimization.level>
-        <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
-        <avrgcc.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcc.compiler.optimization.AllocateBytesNeededForEnum>
-        <avrgcc.compiler.optimization.DebugLevel>Default (-g2)</avrgcc.compiler.optimization.DebugLevel>
-        <avrgcc.compiler.warnings.AllWarnings>True</avrgcc.compiler.warnings.AllWarnings>
-        <avrgcc.compiler.miscellaneous.OtherFlags>-std=gnu99 -include=arduino.h</avrgcc.compiler.miscellaneous.OtherFlags>
-        <avrgcccpp.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcccpp.compiler.general.ChangeDefaultCharTypeUnsigned>
-        <avrgcccpp.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcccpp.compiler.general.ChangeDefaultBitFieldUnsigned>
-        <avrgcccpp.compiler.symbols.DefSymbols>
-          <ListValues>
-            <Value>__AVR_ATmega32u4__</Value>
-            <Value>__AVR_ATmega32U4__</Value>
-            <Value>USB_VID=0x2341</Value>
-            <Value>USB_PID=0x8036</Value>
-            <Value>USB_MANUFACTURER=</Value>
-            <Value>USB_PRODUCT="\"Arduino Leonardo\""</Value>
-            <Value>ARDUINO=101</Value>
-            <Value>ARDUINO_MAIN</Value>
-            <Value>F_CPU=16000000L</Value>
-            <Value>__AVR__</Value>
-            <Value>__cplusplus</Value>
-          </ListValues>
-        </avrgcccpp.compiler.symbols.DefSymbols>
-        <avrgcccpp.compiler.directories.IncludePaths>
-          <ListValues>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\cores\arduino</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\variants\leonardo</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\Wire\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\EEPROM\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\TFT\src</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\TFT\src\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries\SPI\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\PID_v1</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries\PID_v1\utility</Value>
-            <Value>C:\dev\arduino-1.5.7\libraries</Value>
-            <Value>C:\dev\arduino-1.5.7\hardware\arduino\avr\libraries</Value>
-            <Value>C:\Program Files (x86)\Visual Micro\Visual Micro for Arduino\Micro Platforms\default\debuggers</Value>
-            <Value>C:\Users\markus\Documents\Arduino\libraries</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\include\</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\include\avr\</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\avr\</Value>
-            <Value>c:\dev\arduino-1.5.7\hardware\tools\avr\lib\gcc\avr\4.3.2\include\</Value>
-            <Value>
-            </Value>
-          </ListValues>
-        </avrgcccpp.compiler.directories.IncludePaths>
-        <avrgcccpp.compiler.optimization.level>Optimize (-O1)</avrgcccpp.compiler.optimization.level>
-        <avrgcccpp.compiler.optimization.PackStructureMembers>True</avrgcccpp.compiler.optimization.PackStructureMembers>
-        <avrgcccpp.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcccpp.compiler.optimization.AllocateBytesNeededForEnum>
-        <avrgcccpp.compiler.optimization.DebugLevel>Default (-g2)</avrgcccpp.compiler.optimization.DebugLevel>
-        <avrgcccpp.compiler.warnings.AllWarnings>True</avrgcccpp.compiler.warnings.AllWarnings>
-        <avrgcccpp.compiler.miscellaneous.OtherFlags>-include=arduino.h</avrgcccpp.compiler.miscellaneous.OtherFlags>
-        <avrgcccpp.linker.memorysettings.Comment>&lt;segmentname&gt;=&lt;address&gt;, for example  .boot=0xff</avrgcccpp.linker.memorysettings.Comment>
-        <avrgcccpp.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcccpp.assembler.debugging.DebugLevel>
-      </AvrGccCpp>
+  <avrgcc.common.Device>-mmcu=atmega32u4 -B "%24(PackRepoDir)\atmel\ATmega_DFP\1.2.150\gcc\dev\atmega32u4"</avrgcc.common.Device>
+  <avrgcc.common.outputfiles.hex>True</avrgcc.common.outputfiles.hex>
+  <avrgcc.common.outputfiles.lss>True</avrgcc.common.outputfiles.lss>
+  <avrgcc.common.outputfiles.eep>True</avrgcc.common.outputfiles.eep>
+  <avrgcc.common.outputfiles.srec>True</avrgcc.common.outputfiles.srec>
+  <avrgcc.common.outputfiles.usersignatures>False</avrgcc.common.outputfiles.usersignatures>
+  <avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned>
+  <avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned>
+  <avrgcc.compiler.symbols.DefSymbols>
+    <ListValues>
+      <Value>__AVR_ATmega32u4__</Value>
+      <Value>__AVR_ATmega32U4__</Value>
+      <Value>ARDUINO=157</Value>
+      <Value>ARDUINO_MAIN</Value>
+      <Value>F_CPU=16000000L</Value>
+      <Value>__AVR__</Value>
+      <Value>ARDUINO_AVR_LEONARDO</Value>
+      <Value>ARDUINO_ARCH_AVR</Value>
+      <Value>USB_VID=0x2341</Value>
+      <Value>USB_PID=0x8036</Value>
+      <Value>USB_MANUFACTURER=</Value>
+    </ListValues>
+  </avrgcc.compiler.symbols.DefSymbols>
+  <avrgcc.compiler.directories.IncludePaths>
+    <ListValues>
+      <Value>../../../grbl_mc_leonardo</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/EEPROM</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries/PID_v1</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/SPI</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries/TFT/src</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries/TFT/src/utility</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire/utility</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries</Value>
+      <Value>C:/Users/markus/Documents/Arduino/libraries</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/cores/arduino</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/variants/leonardo</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino</Value>
+    </ListValues>
+  </avrgcc.compiler.directories.IncludePaths>
+  <avrgcc.compiler.optimization.level>Optimize (-O1)</avrgcc.compiler.optimization.level>
+  <avrgcc.compiler.optimization.PackStructureMembers>True</avrgcc.compiler.optimization.PackStructureMembers>
+  <avrgcc.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcc.compiler.optimization.AllocateBytesNeededForEnum>
+  <avrgcc.compiler.optimization.DebugLevel>Default (-g2)</avrgcc.compiler.optimization.DebugLevel>
+  <avrgcc.compiler.warnings.AllWarnings>True</avrgcc.compiler.warnings.AllWarnings>
+  <avrgcc.compiler.miscellaneous.OtherFlags>-std=gnu99 -include=arduino.h</avrgcc.compiler.miscellaneous.OtherFlags>
+  <avrgcccpp.compiler.general.ChangeDefaultCharTypeUnsigned>True</avrgcccpp.compiler.general.ChangeDefaultCharTypeUnsigned>
+  <avrgcccpp.compiler.general.ChangeDefaultBitFieldUnsigned>True</avrgcccpp.compiler.general.ChangeDefaultBitFieldUnsigned>
+  <avrgcccpp.compiler.symbols.DefSymbols>
+    <ListValues>
+      <Value>__AVR_ATmega32u4__</Value>
+      <Value>__AVR_ATmega32U4__</Value>
+      <Value>ARDUINO=157</Value>
+      <Value>ARDUINO_MAIN</Value>
+      <Value>F_CPU=16000000L</Value>
+      <Value>__AVR__</Value>
+      <Value>ARDUINO_AVR_LEONARDO</Value>
+      <Value>ARDUINO_ARCH_AVR</Value>
+      <Value>USB_VID=0x2341</Value>
+      <Value>USB_PID=0x8036</Value>
+      <Value>USB_MANUFACTURER=</Value>
+    </ListValues>
+  </avrgcccpp.compiler.symbols.DefSymbols>
+  <avrgcccpp.compiler.directories.IncludePaths>
+    <ListValues>
+      <Value>../../../grbl_mc_leonardo</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/EEPROM</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries/PID_v1</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/SPI</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries/TFT/src</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries/TFT/src/utility</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire/utility</Value>
+      <Value>C:/dev/arduino-1.5.7/libraries</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries</Value>
+      <Value>C:/Users/markus/Documents/Arduino/libraries</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/cores/arduino</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/variants/leonardo</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino</Value>
+    </ListValues>
+  </avrgcccpp.compiler.directories.IncludePaths>
+  <avrgcccpp.compiler.optimization.level>Optimize (-O1)</avrgcccpp.compiler.optimization.level>
+  <avrgcccpp.compiler.optimization.PackStructureMembers>True</avrgcccpp.compiler.optimization.PackStructureMembers>
+  <avrgcccpp.compiler.optimization.AllocateBytesNeededForEnum>True</avrgcccpp.compiler.optimization.AllocateBytesNeededForEnum>
+  <avrgcccpp.compiler.optimization.DebugLevel>Default (-g2)</avrgcccpp.compiler.optimization.DebugLevel>
+  <avrgcccpp.compiler.warnings.AllWarnings>True</avrgcccpp.compiler.warnings.AllWarnings>
+  <avrgcccpp.compiler.miscellaneous.OtherFlags>-include=arduino.h</avrgcccpp.compiler.miscellaneous.OtherFlags>
+  <avrgcccpp.assembler.general.IncludePaths>
+    <ListValues>
+      <Value>%24(PackRepoDir)\atmel\ATmega_DFP\1.2.150\include</Value>
+    </ListValues>
+  </avrgcccpp.assembler.general.IncludePaths>
+  <avrgcccpp.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcccpp.assembler.debugging.DebugLevel>
+</AvrGccCpp>
     </ToolchainSettings>
     <VisualMicroSettings>
       <VisualMicroSettings>
@@ -555,9 +544,11 @@ object_files="C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonar
         <visualmicro.application.name>arduino15x</visualmicro.application.name>
         <visualmicro.package.name>arduino</visualmicro.package.name>
         <visualmicro.platform.name>avr</visualmicro.platform.name>
-        <arduino.upload.port>COM3</arduino.upload.port>
+        <arduino.upload.port>COM6</arduino.upload.port>
+        <vm.upload.useprogrammer>1</vm.upload.useprogrammer>
       </VisualMicroSettings>
     </VisualMicroSettings>
+    <VMSETTING_IncludePaths>../../../grbl_mc_leonardo;C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/EEPROM;C:/dev/arduino-1.5.7/libraries/PID_v1;C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/SPI;C:/dev/arduino-1.5.7/libraries/TFT/src;C:/dev/arduino-1.5.7/libraries/TFT/src/utility;C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire;C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire/utility;C:/dev/arduino-1.5.7/libraries;C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries;C:/Users/markus/Documents/Arduino/libraries;C:/dev/arduino-1.5.7/hardware/arduino/avr/cores/arduino;C:/dev/arduino-1.5.7/hardware/arduino/avr/variants/leonardo;c:/dev/arduino-1.5.7/hardware/tools/avr/avr/include/;c:/dev/arduino-1.5.7/hardware/tools/avr/avr/include/avr/;c:/dev/arduino-1.5.7/hardware/tools/avr/avr/;C:/dev/arduino-1.5.7/hardware/arduino;</VMSETTING_IncludePaths>
   </PropertyGroup>
   <ItemGroup>
     <None Include="grbl_mc_leonardo.ino">
@@ -565,10 +556,10 @@ object_files="C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonar
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Visual Micro\" />
+    <Folder Include="__vm\" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Visual Micro\.grbl_mc_leonardo.vsarduino.h">
+    <Compile Include="__vm\.grbl_mc_leonardo.vsarduino.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
