@@ -45,7 +45,7 @@
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "3.5b"
+#define VERSION  "3.5c"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -1105,6 +1105,15 @@ void setSpindle( int mode, int rpm) {
 //-------------------------------------------------------------------------
 // laser
 
+void setLaserOn( bool on) {
+	mcLaserOn = on;
+	if ( on) {
+		PORT_LASER_CTRL |= (1 << PIN_LASER_DIS);
+	} else {
+		PORT_LASER_CTRL &= ~(1 << PIN_LASER_DIS);
+	}
+}
+	
 void setLaserValue( int val) {
 
   if ( val > 0x3ff) val = 0x3ff;
@@ -1127,14 +1136,14 @@ void setLaser( int mode, int val) {
 	switch( mode) {
 		case SPINDLE_CCW:
 		case SPINDLE_CW:
-			mcLaserOn = true;
+			setLaserOn( true);
 			setLaserValue( val);
 
 			PORT_SPINDLE_CTRL &= ~(1 << PIN_SPINDLE_EN);
 		break;
 
 		case SPINDLE_OFF:
-			mcLaserOn = false;			
+			setLaserOn( false);
 			PORT_SPINDLE_CTRL |= (1 << PIN_SPINDLE_EN);
 			
 			setLaserValue( 0);
@@ -1385,11 +1394,11 @@ ISR( INT6_vect) {
 
 //----------------------------------------------------------------------------
 // rpm counter overflow
-
-ISR( TIMER0_OVF) {
+/*
+ISR( TIMER0_OVF_vect) {
   ;
 }
-
+*/
 //----------------------------------------------------------------------------
 // rpm counter gate interrupt
   
