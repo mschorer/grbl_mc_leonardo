@@ -45,7 +45,7 @@
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "3.5c"
+#define VERSION  "3.5d"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -413,9 +413,6 @@ void setup( void) {
   DIR_COOLANT_CTRL |= ((1<< PIN_COOLANT_MIST) | (1<< PIN_COOLANT_FLOOD));
   PORT_COOLANT_CTRL &= ~((1<< PIN_COOLANT_MIST) | (1<< PIN_COOLANT_FLOOD));  // disable coolants
 
-//  DIR_LASER_CTRL |= (1<< PIN_LASER_EN);
-//  PORT_LASER_CTRL &= ~(1<< PIN_LASER_EN);  // disable laser
-
   // switch to PWM TMR3A, dir needs to be set "out"
   DIR_SPINDLE_PWM |= (1<< PIN_SPINDLE_PWM);      // set PE6 as output
 //  PORT_SPINDLE_PWM &= ~(1<< PIN_SPINDLE_PWM);    // preset to 0
@@ -434,7 +431,7 @@ void setup( void) {
   DIR_LASER_CTRL |= (1<< PIN_LASER_DIS);
   PORT_LASER_CTRL |= (1<< PIN_LASER_DIS);  // disable laser
 
-  DIR_LASER_CTRL &= ~(1<< PIN_SAFETY);
+//  PORT_LASER_CTRL &= ~(1<< PIN_SAFETY);
 
   // set spares to input
 //  DDRC &= ~(1<< PC7);                // high
@@ -513,6 +510,8 @@ void setup( void) {
   TC4H  = 0x00;
   OCR4D = 0;    // not used
   TIMSK4 = 0x00;  //(0<< OCIE4d) | (0<< OCIE4A) | (0<< OCIE4B) | (0<< TOIE4);
+  
+  setLaserValue( 0);
 
   //----------------------------------------------------------------------------
   // bring up services
@@ -528,7 +527,7 @@ void setup( void) {
 
   esc_state = ( PINB_SPINDLE_CTRL & (1<< PIN_SPINDLE_SENSE)) ? ESC_AUTO : ESC_NC;
 
-//  setLaser( SPINDLE_OFF, 0);
+  setLaserEnable( false);
   
 //  setSpindleOn( false);
 //  setSpindleCW( true);
@@ -1105,12 +1104,12 @@ void setSpindle( int mode, int rpm) {
 //-------------------------------------------------------------------------
 // laser
 
-void setLaserOn( bool on) {
+void setLaserEnable( bool on) {
 	mcLaserOn = on;
 	if ( on) {
-		PORT_LASER_CTRL |= (1 << PIN_LASER_DIS);
-	} else {
 		PORT_LASER_CTRL &= ~(1 << PIN_LASER_DIS);
+	} else {
+		PORT_LASER_CTRL |= (1 << PIN_LASER_DIS);
 	}
 }
 	
@@ -1123,6 +1122,8 @@ void setLaserValue( int val) {
 
   mcLaserCurrent = val;
   state->spindle.rpm_current = val;
+  
+  val = 1000 - val;
 
   TC4H  = ( val >> 8) & 0x03;
   OCR4A = ( val >> 0) & 0xff;
@@ -1136,17 +1137,17 @@ void setLaser( int mode, int val) {
 	switch( mode) {
 		case SPINDLE_CCW:
 		case SPINDLE_CW:
-			setLaserOn( true);
 			setLaserValue( val);
+			setLaserEnable( true);
 
-			PORT_SPINDLE_CTRL &= ~(1 << PIN_SPINDLE_EN);
+//			PORT_SPINDLE_CTRL &= ~(1 << PIN_SPINDLE_EN);
 		break;
 
 		case SPINDLE_OFF:
-			setLaserOn( false);
-			PORT_SPINDLE_CTRL |= (1 << PIN_SPINDLE_EN);
-			
+			setLaserEnable( false);
 			setLaserValue( 0);
+
+//			PORT_SPINDLE_CTRL |= (1 << PIN_SPINDLE_EN);
 		break;
 	}
 }
@@ -1386,6 +1387,8 @@ ISR( INT6_vect) {
 
     if (( mute & (1<< PIN_MUTE)) == LOW) {
       manual_override = !manual_override;
+      
+      mcToolValue( state->spindle.rpm, state->spindle.rpm_current);
     }
     
     ui_update = true;
