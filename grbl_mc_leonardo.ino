@@ -1,7 +1,7 @@
 /*
   esc spindle/laser controller for grbl
   by ms@ms-ite.de
-  
+
   - controlled via i2c
   - a rotary encoder/switch for speed/manual stop
   - tools #0/1/2 for spindle:
@@ -38,14 +38,14 @@
 
 //#include <PID_AutoTune_v0.h>
 #include <PID_v1.h>
- 
+
 // pin definition for the Leonardo
 #define DP_CS   A2  // 20  // A0
 #define DP_DC   A0  // 18  // A2
 #define DP_RST  A1  // 19  // A1
 #define SD_CS   A3  // 21  // A3
 
-#define VERSION  "3.5d"
+#define VERSION  "3.5f"
 
 #ifndef TWI_RX_BUFFER_SIZE
 #define TWI_RX_BUFFER_SIZE ( 16 )
@@ -199,7 +199,7 @@
 #define RPM_HZ        12  // gate frequency in Hz
 
 // choose a reasonable size for the averaging buffer (this one also makes the rpm-multiplier easy to calculate (60 / 6 = 10))
-#define RPM_BUFFER    6  // averaging buffer depth 
+#define RPM_BUFFER    6  // averaging buffer depth
 
 #define RPM_SCALE     10  //(((RPM_HZ / RPM_PPR) * (60 / RPM_BUFFER)))
 #define RPM_TICKS     (15625 / RPM_HZ)            // timer ticks
@@ -316,12 +316,12 @@ TFT TFTscreen = TFT( DP_CS, DP_DC, DP_RST);
 void setup( void) {
 
   Serial.begin(9600);
-  
+
   Serial.print("grbl_mc ");
   Serial.println( VERSION);
 
   eeprom_get( EEP_SETTINGS_ADDR, (uint8_t*) &store, sizeof( SettingsStore));
-  
+
   setCrc = eeprom_crc( (uint8_t*) &store.state, sizeof( mcState));
 
   if ( true || setCrc != store.crc) {
@@ -365,23 +365,23 @@ void setup( void) {
 	state->spindle.transfer = transferPID;
 
     store.crc = eeprom_crc( (uint8_t*) &store.state, sizeof( mcState));
-    
+
     eeprom_put( EEP_SETTINGS_ADDR, (uint8_t*) &store, sizeof( SettingsStore));
 //    EEPROM.put( EEP_SETTINGS_ADDR, &settings);
-    
+
     Serial.println( "parms preset");
   } else Serial.println( "parms read");
-  
+
 	tcSpindle = &state->tooltable[0];
 	tcLaser = &state->tooltable[1];
 	mcToolChange();
 
   myPID = new PID(&Input, &Output, &Setpoint, state->tooltable[0].params.pid.Kp, state->tooltable[0].params.pid.Ki, state->tooltable[0].params.pid.Kd, DIRECT);
-  
+
   TFTscreen.begin();
   TFTscreen.setRotation( 3);
   TFTscreen.background( ST7735_BLACK);
-  
+
   TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
   TFTscreen.stroke( ST7735_WHITE);
   TFTscreen.fill( ST7735_BLACK);
@@ -391,13 +391,13 @@ void setup( void) {
   //----------------------------------------------------------------------------
   // configure pins
 
-  // inputs  
+  // inputs
   DIR_UPDN &= ~( (1<< PIN_UP) | (1<< PIN_DOWN));
   PORT_UPDN |= ( (1<< PIN_DOWN) | (1<< PIN_UP));  // enable pullup for inputs
 
   DIR_MUTE  &= ~( (1<< PIN_MUTE));
   PORT_MUTE |= (1<< PIN_MUTE);  // enable pullup for input
-  
+
   DIR_RPM_SENSE &= ~(1<< PIN_RPM_SENSE);
   PORT_RPM_SENSE |= (1<< PIN_RPM_SENSE);  // enable pullup for input
 
@@ -406,7 +406,7 @@ void setup( void) {
   DIR_SPINDLE_CTRL &= ~(1<< PIN_SPINDLE_SENSE);                    // IN: spindle sense
   DIR_SPINDLE_CTRL |= (1<< PIN_SPINDLE_DIR | 1<< PIN_SPINDLE_EN);  // OUT: EN and DIR
 //  PORT_SPINDLE_CTRL &= ~(1<< PIN_SPINDLE_SENSE);  // enable pullup for input
-  
+
   DIR_BACKLIGHT |= (1<< PIN_BACKLIGHT);
   PORT_BACKLIGHT &= ~(1<< PIN_BACKLIGHT);  // enable pullup for input
 
@@ -421,7 +421,7 @@ void setup( void) {
   DIR_LED_L |= (1<< PIN_LED_L);
 //  PORT_LED_L |= (1<< PIN_LED_L);
 //  PORT_LED_L &= !(1<< PIN_LED_L);
-    
+
   DIR_LED_RX |= (1<< PIN_LED_RX);
   PORT_LED_RX |= (1<< PIN_LED_RX);
 
@@ -443,13 +443,13 @@ void setup( void) {
   EICRA = ((0<< ISC31) | (1<< ISC30) | (0<< ISC21) | (1<< ISC20)) | ( EICRA & 0x0f);
   EICRB = (0<< ISC61) | (1<< ISC60);
   EIMSK |= (1<< INT6) | (1<< INT3) | (1<< INT2);
-  
+
   PCMSK0 |= (1<< PCINT4);  // enable PCINT4 on PB4
   PCICR |= (1<< PCIE0);   // enable pin change interrupts
-  
+
   //----------------------------------------------------------------------------
   // setup time/counters
-  
+
   // setup prescalers
   GTCCR = (0<< TSM) | (0<< PSRSYNC);
 
@@ -470,9 +470,9 @@ void setup( void) {
   TCNT1 = 0;
   OCR1A = RPM_TICKS;    //2604;   // set for 5Hz
   OCR1B = 0;    // not used
-  OCR1C = 0;  // 16Mhz / 1024 / 20Hz 
+  OCR1C = 0;  // 16Mhz / 1024 / 20Hz
   TIMSK1 = 0x02;  //(0<< ICIE1) | (0<< OCIE1C) | (0<< OCIE1B) | (1<< OCIE1A) | (0<< TOIE1);
-  
+
   // setup timer for spindle PWM generation
   // clear oc3a on match/ set on reset, 64x prescaler, fast pwm ICR3-max OCR3-compare mode, int off [interrupt on ocra match
   TCCR3A = 0x82;  //(1<< COM3A1) | (0<< COM3A0) | (0<<COM3B1) | (0<< COM3B0) | (0<<COM3C1) | (0<< COM3C0) | ( 1<< WGM31) | (0<< WGM30);
@@ -489,12 +489,12 @@ void setup( void) {
   PLLFRQ = (0<< PINMUX) | (0<< PLLUSB) | (1<< PLLTM1) | (1<< PLLTM0) | (0<< PDIV3) | (1<< PDIV2) | (0<< PDIV1) | (0<< PDIV0);
   PLLCSR |= _BV(PLLE);
   while(!(PLLCSR & _BV(PLOCK)));
-   
+
   // setup pwm mode for led
   // disconnect oc1a/oc1b, external clock, normal mode, no interrupts
   TC4H  = 0x00;
   TCCR4A = 0x82;  //(1<< COM4A1) | (0<< COM4A0) | (0<< COM4B1) | (0<< COM4B0) | (0<< FOC4A) | (0<< FOC4B) |(1<< PWM4A) | (0<< PWM4B);
-  TCCR4B = 0x08;  //(0<< PWM4X) | (0<< PSR4) | (0<< DTPS40) | (0<< DTPS41) | (1<< CS43) | (0<< CS42) | (0<< CS41) | (0<< CS40);
+  TCCR4B = 0x08;  //(1<< PWM4X) | (0<< PSR4) | (0<< DTPS40) | (0<< DTPS41) | (1<< CS43) | (0<< CS42) | (0<< CS41) | (0<< CS40);
 //  TC4H  = 0x03;
 //  TCCR4C = 0x00;  //(0<< COM4A1S) | (0<< COM4A0S) | (0<< COM4B1S) | (0<< COM4B0S) | (0<< COM4D1) | (0<< COM4D0) | (0<< FOC4D) | (0<< PWM4D);
 
@@ -503,19 +503,24 @@ void setup( void) {
   TCCR4D = 0x00;  //(0<< FPIE4) | (0<< FPEN4) | (0<< FPNC4) | (0<< FPES4) | (0<< FPAC4) | (0<< FPF4) | (0<< WGM41) | (0<< WGM40);
   TCCR4E = 0x00;  //(0<< TLOCK4) | (0<< ENHC4) | (0<< OC4OE5) | (0<< OC4OE4) | (0<< OC4OE3) | (0<< OE4OC2) | (0<< OE4OC1) | (0<< OE4OC0);
 //  TCNT4 = 0;
-  OCR4A = 0x00;     // pwm freq
-  OCR4B = 0x0;    // not used
-  TC4H  = 0x00;
-  OCR4C = 0xe9;     // top
-  TC4H  = 0x00;
-  OCR4D = 0;    // not used
-  TIMSK4 = 0x00;  //(0<< OCIE4d) | (0<< OCIE4A) | (0<< OCIE4B) | (0<< TOIE4);
+
+  TC4H  = 0x0;
+  OCR4A = 0x0;     // pwm freq
   
+  TC4H  = 0x03;
+  OCR4C = 0xe8;     // top
+  
+  TC4H  = 0x0;
+  OCR4D = 0x0;    // not used
+  OCR4B = 0x0;    // not used
+
+  TIMSK4 = 0x00;  //(0<< OCIE4d) | (0<< OCIE4A) | (0<< OCIE4B) | (0<< TOIE4);
+
   setLaserValue( 0);
 
   //----------------------------------------------------------------------------
   // bring up services
-  
+
   Wire.begin( 0x5c);            // join i2c bus with address $5c for SpeedControl
   Wire.onReceive(receiveEvent); // register event
   Wire.onRequest(requestEvent); // register event
@@ -528,7 +533,7 @@ void setup( void) {
   esc_state = ( PINB_SPINDLE_CTRL & (1<< PIN_SPINDLE_SENSE)) ? ESC_AUTO : ESC_NC;
 
   setLaserEnable( false);
-  
+
 //  setSpindleOn( false);
 //  setSpindleCW( true);
 
@@ -536,12 +541,12 @@ void setup( void) {
   setCoolantFlood( false);
 }
 
-void loop( void) { 
+void loop( void) {
   setupUI();
 
   set_sleep_mode(SLEEP_MODE_IDLE);
   sleep_enable();
-  
+
   // now loop
 //  setSpindlePwm( SPINDLE_PWM_OFF);
   uint16_t tock = 0;
@@ -580,7 +585,7 @@ void loop( void) {
     }
     ui_update = false;
     tock++;
-    
+
 //    TOGGLE_LED_L |= (1<< PIN_LED_L);
   }
 }
@@ -588,13 +593,13 @@ void loop( void) {
 void dumpSerial() {
   Serial.print("grbl_mc ");
   Serial.println( VERSION);
-  
+
   Serial.print( "parms crc [");
   Serial.print( setCrc);
   Serial.print( "_");
   Serial.print( store.crc);
   Serial.println( "]");
-  
+
   Serial.print( "parms [");
   Serial.print( state->tooltable[0].params.pid.Kp);
   Serial.print( "_");
@@ -603,7 +608,7 @@ void dumpSerial() {
   Serial.print( state->tooltable[0].params.pid.Kd);
   Serial.println( "]");
 }
-  
+
 //----------------------------------------------------------------------------
 // eeprom
 
@@ -614,10 +619,10 @@ int eeprom_get( int ptr, uint8_t* data, int len) {
     ptr++;
     data++;
   }
-  
+
   return i;
 }
-  
+
 int eeprom_put( int ptr, uint8_t* data, int len) {
   int i;
   for( i=0; i < len; i++) {
@@ -625,10 +630,10 @@ int eeprom_put( int ptr, uint8_t* data, int len) {
     ptr++;
     data++;
   }
-  
+
   return i;
 }
-  
+
 unsigned long eeprom_crc( uint8_t* data, int len) {
 
   const unsigned long crc_table[16] = {
@@ -671,7 +676,7 @@ void setupUI() {
   TFTscreen.setCursor( 2, 2);
   TFTscreen.print( "-");
 
-  // servo bar  
+  // servo bar
   TFTscreen.noFill();
   TFTscreen.rect( 2, 35, 156, 8, 0);
 
@@ -701,7 +706,7 @@ void setupUI() {
 
   // msgDisplay
   TFTscreen.drawFastHLine( 0, 103, 160, ST7735_WHITE);
-  
+
   TFTscreen.setTextSize(2);
   TFTscreen.setCursor( 0, 106);
   TFTscreen.print( "gCtrl");
@@ -709,14 +714,14 @@ void setupUI() {
   sprintf( cbuf, "%s", VERSION);
   TFTscreen.setCursor( 136, 120);
   TFTscreen.print( cbuf);
-  
+
   TFTscreen.setCursor( 0, 120);
   TFTscreen.print( "crc ");
   TFTscreen.print(( setCrc == store.crc) ? "OK" : "ERR");
 //  TFTscreen.print( store.crc, HEX);
 //  TFTscreen.print( "-");
 //  TFTscreen.print( sizeof(pidParms), HEX);
-  
+
   updateFault( true);
   updateLimit( true);
 }
@@ -764,7 +769,7 @@ void updateSMode( bool force) {
 }
 
 void updateRpm( bool force) {
-  if ( d_rpm_pwm != state->spindle.rpm_control || force) {  
+  if ( d_rpm_pwm != state->spindle.rpm_control || force) {
     d_rpm_pwm = state->spindle.rpm_control;
     int bar = max( 0, min( 154, round( state->spindle.rpm_control / ( tcCurrent->max / 154))));
     TFTscreen.noStroke();
@@ -776,7 +781,7 @@ void updateRpm( bool force) {
     }
   }
 
-  if ( d_power_value != state->spindle.rpm || force) {  
+  if ( d_power_value != state->spindle.rpm || force) {
     if ( state->spindle.rpm) sprintf( cbuf, "%05d", state->spindle.rpm);  //String( _power_value).toCharArray( cbuf, 5);  //GLCD.Printf("%05d", _power_value);
     else sprintf( cbuf, "-off-");
 //    TFTscreen.fill( 0,0,0);
@@ -787,7 +792,7 @@ void updateRpm( bool force) {
     TFTscreen.print( cbuf);
     d_power_value = state->spindle.rpm;
   }
-  
+
   int rpm_diff = state->spindle.rpm - state->spindle.rpm_current;
   uint16_t color;
 
@@ -800,7 +805,7 @@ void updateRpm( bool force) {
     if ( state->spindle.rpm_current < 20000) sprintf( cbuf, "%05d", state->spindle.rpm_current);  //rpmDisplay.Printf("%05d", _power_current);
 
     TFTscreen.setTextColor( color, ST7735_BLACK);
-  
+
     TFTscreen.setTextSize(4);
     TFTscreen.setCursor(40, 2);
     TFTscreen.print( cbuf);
@@ -857,7 +862,7 @@ void bitString( uint8_t x, uint8_t bm) {
   uint8_t i, bt = 0x01;
 
   TFTscreen.setTextSize(1);
-  
+
   for( i=0; i < 6; i++) {
     TFTscreen.setCursor( x, 95);
     if ( bm & bt) {
@@ -890,15 +895,15 @@ void updateLimit( bool force) {
 void updateMessage() {
   uint8_t i = 0;
   uint8_t ln = 106;
-  
+
 //  TFTscreen.noStroke();
   TFTscreen.fill( ST7735_BLACK);
   TFTscreen.rect( 0, 106, 159, 119);
-  
+
   TFTscreen.setTextColor( ST7735_WHITE, ST7735_BLACK);
   TFTscreen.setTextSize(1);
   String line;
-    
+
   while( i < MSG_MAX) {
 
     switch( message[i]) {
@@ -914,28 +919,28 @@ void updateMessage() {
         }
         if ( message[i] == 0) i = MSG_MAX;
       break;
-    
+
       default:
         line += message[ i];
     }
     i++;
   }
 
-  msg_changed = false;  
+  msg_changed = false;
 }
 
 //----------------------------------------------------------------------------
 // handle i2c protocol
-  
+
 void receiveEvent( int howMany) {
   uint16_t rpm = 0; // receive byte as a character
   uint8_t c = 0;
 
-  while ( howMany > 0) {    
-    
+  while ( howMany > 0) {
+
     c = Wire.read();
     howMany--;
-    
+
     if ( c & 0x80) {
       // S-command
       rpm = ( c & 0x7f) << 8;
@@ -944,13 +949,13 @@ void receiveEvent( int howMany) {
         rpm |= c;
         howMany--;
       }
-  
+
 		if ( state->spindle.rpm != rpm) {
 			if ( rpm > tcCurrent->maximum) state->spindle.rpm = tcCurrent->maximum;
 			else if ( rpm < tcCurrent->minimum) state->spindle.rpm = tcCurrent->minimum;
 			else state->spindle.rpm = rpm;
-      
-//      setSpindleValue( _power_value);    
+
+//      setSpindleValue( _power_value);
 //      setTool( state->tool.active, _sMode != SPINDLE_OFF, _sMode == SPINDLE_CW, _power_value);
 			ui_update = true;
 		}
@@ -972,12 +977,12 @@ void receiveEvent( int howMany) {
 				PORT_LED_TX |= (1<< PIN_LED_TX);
 				mcToolMode( par);
             break;
-            
+
             // tool change: M6
-            case CMD_M6: 
+            case CMD_M6:
 				mcToolChange();
             break;
-            
+
             // coolant control M7/8/9
             case CMD_M7: coolant |= COOLANT_MIST;
               PORT_LED_RX &= !(1<< PIN_LED_RX);
@@ -995,11 +1000,11 @@ void receiveEvent( int howMany) {
           }
           break;
 
-        // Tx command          
+        // Tx command
         case CMD_TX:
           mcToolPrepare( par);
           break;
-        
+
         // send message command
         case CMD_MSG:
           switch( par) {
@@ -1009,14 +1014,14 @@ void receiveEvent( int howMany) {
                   howMany--;
                 }
             break;
-            
+
             case CMD_MSG_FLT:
                 if ( howMany > 0) {
                   _msg_flt = Wire.read();
                   howMany--;
                 }
             break;
-            
+
             case CMD_MSG_TXT:
               byte msgidx = 0;
               while( howMany > 0 && msgidx < MSG_MAX) {
@@ -1030,7 +1035,7 @@ void receiveEvent( int howMany) {
       }
     }
   }
-  
+
   ui_update = true;
 }
 
@@ -1045,7 +1050,7 @@ void clearRpmBuffer() {
   for( uint8_t i=0; i < RPM_BUFFER; i++) {
     _rpm_avg[ i] = 0;
   }
-  
+
   _rpm_avg_sum = 0;
   state->spindle.rpm_current = 0;
 }
@@ -1089,7 +1094,7 @@ void setSpindleMode( int mode) {
 		   setSpindleOn( true);
 		break;
 
-		case SPINDLE_OFF:			
+		case SPINDLE_OFF:
 		   setSpindleOn( false);
 		break;
 	}
@@ -1112,18 +1117,16 @@ void setLaserEnable( bool on) {
 		PORT_LASER_CTRL |= (1 << PIN_LASER_DIS);
 	}
 }
-	
+
 void setLaserValue( int val) {
 
   if ( val > 0x3ff) val = 0x3ff;
   if ( val < 0) val = 0;
-  
+
   if ( ! mcLaserOn) val = 0;
 
   mcLaserCurrent = val;
   state->spindle.rpm_current = val;
-  
-  val = 1000 - val;
 
   TC4H  = ( val >> 8) & 0x03;
   OCR4A = ( val >> 0) & 0xff;
@@ -1286,7 +1289,7 @@ void setCoolantFlood( bool on) {
 
 //----------------------------------------------------------------------------
 // helpers
-  
+
 byte gamma_correction(byte input) {
   unsigned int multiplied = input * input;
   return multiplied / 256;
@@ -1294,10 +1297,10 @@ byte gamma_correction(byte input) {
 
 byte encoder( byte input) {
   byte res = 0;
-  
+
   if ( input & ( 1<< PIN_UP)) res |= 0x02;
   if ( input & ( 1<< PIN_DOWN)) res |= 0x01;
-  
+
   return res;
 }
 
@@ -1306,19 +1309,19 @@ byte encoder( byte input) {
 
 ISR( PCINT0_vect) {
   byte pwr_sense = PINB_SPINDLE_CTRL & (1<< PIN_SPINDLE_SENSE);
-  
+
   if ( pwr_sense) {
     esc_ticks = 0;
     esc_state = ESC_AUTO;  //ESC_SETUP_MIN;
   } else {
     esc_state = ESC_NC;
-  } 
+  }
   ui_update = true;
 }
-  
+
 //----------------------------------------------------------------------------
 // interrupt handlers for buttons
-// level change interrupt on 
+// level change interrupt on
 
 ISR( INT2_vect) {
   turnDecode();
@@ -1327,47 +1330,47 @@ ISR( INT2_vect) {
 ISR( INT3_vect) {
   turnDecode();
 }
-  
+
 void turnDecode() {
-  
+
   //      00 01 10 11
   //  00  .  -  +  .
   //  01  +  .  .  -
   //  11  .  +  -  .
   //  10  -  .  .  +
-/*  
-  const byte enc_states[] = { NOP, DOWN, UP, NOP, 
-                              UP, NOP, NOP, DOWN, 
-                              DOWN, NOP, NOP, UP, 
+/*
+  const byte enc_states[] = { NOP, DOWN, UP, NOP,
+                              UP, NOP, NOP, DOWN,
+                              DOWN, NOP, NOP, UP,
                               NOP, UP, DOWN, NOP};
 */
-	const byte enc_states[] = { NOP, DOWN, UP, NOP, 
-								UP, NOP, NOP, DOWN, 
-								DOWN, NOP, NOP, UP, 
+	const byte enc_states[] = { NOP, DOWN, UP, NOP,
+								UP, NOP, NOP, DOWN,
+								DOWN, NOP, NOP, UP,
 								NOP, UP, DOWN, NOP};
 
   static byte encoder_pos = 0;
-  
+
   byte pin_dir = PINB_UPDN & ((1<< PIN_UP) | (1<< PIN_DOWN));
-  
+
   // should always be true as we're triggered only on edges
   if ( pin_dir ^ pin_updn) {
     pin_updn = pin_dir;
 
     byte enc = encoder( pin_dir);
-    
+
     if ( enc != encoder_pos) {
       enc |= encoder_pos << 2;
-      
+
       switch ( enc_states[ enc]) {
         case UP:
 			mcStepValueDown();
         break;
-        
+
         case DOWN:
 			mcStepValueUp();
         break;
-        
+
         default:
           ;
       }
@@ -1376,21 +1379,21 @@ void turnDecode() {
   }
 }
 
-// level change interrupt on 
+// level change interrupt on
 ISR( INT6_vect) {
-  
+
   byte mute = PINB_MUTE & (1<< PIN_MUTE);
-  
+
   // should always be true as we're triggered only on edges
   if ( mute ^ pin_mute) {
     pin_mute = mute;
 
     if (( mute & (1<< PIN_MUTE)) == LOW) {
       manual_override = !manual_override;
-      
+
       mcToolValue( state->spindle.rpm, state->spindle.rpm_current);
     }
-    
+
     ui_update = true;
   }
 }
@@ -1404,31 +1407,31 @@ ISR( TIMER0_OVF_vect) {
 */
 //----------------------------------------------------------------------------
 // rpm counter gate interrupt
-  
+
 // rpm measurement gate clock
 ISR(TIMER1_COMPA_vect) {
 //  setLED( ( sys_ticks & 0x01) ? 0x3ff : (_rpm_pwm >> 1), _motor_manual, _motor_manual);
-  
+
   sys_ticks++;
-  
+
   uint16_t rotations = getCurrentValue();
- 
+
   _rpm_avg_sum -= _rpm_avg[ _rpm_avg_idx];
   _rpm_avg_sum += rotations;
 
   _rpm_avg[ _rpm_avg_idx] = rotations;
   _rpm_avg_idx++;
   if ( _rpm_avg_idx >= RPM_BUFFER) _rpm_avg_idx = 0;
-  
+
   uint16_t last_rpm = state->spindle.rpm_current;
   state->spindle.rpm_current = _rpm_avg_sum * RPM_SCALE;  // * RPM_HZ * 60 / RPM_BUFFER
   TCNT0 = 0;
-  
+
   if ( state->spindle.rpm_current != last_rpm) ui_update = true;
 
   if ( false) {
     // esc controller, implement esc enable sequence (min,max throttle)
-    
+
     switch( esc_state) {
       case ESC_SETUP_MIN:
         if ( ++esc_ticks >= ESC_TICKS_MIN) {
@@ -1444,7 +1447,7 @@ ISR(TIMER1_COMPA_vect) {
           esc_state = ESC_AUTO;
           ui_update = true;
         } else break;
-  
+
       case ESC_AUTO:
         if (manual_override ^ (state->spindle.mode != SPINDLE_OFF)) {
 			setSpindlePwm( state->spindle.transfer( state->spindle.rpm, state->spindle.rpm_current));
@@ -1452,7 +1455,7 @@ ISR(TIMER1_COMPA_vect) {
           setSpindlePwm( SPINDLE_PWM_OFF);
         }
       break;
-      
+
       case ESC_NC:
       default:
         setSpindlePwm( SPINDLE_PWM_OFF);
@@ -1466,7 +1469,7 @@ ISR(TIMER1_COMPA_vect) {
 
 //----------------------------------------------------------------------------
 // pwm timer
-  
+
 // timer interrupt for pwm signal generation
 /*
 ISR(TIMER3_COMPA_vect) {
@@ -1482,7 +1485,7 @@ ISR(TIMER3_COMPA_vect) {
         OCR1A = SPINDLE_PWM_MIN_OFF - _rpm_pwm;
         PORT_SPINDLE_PWM &= ~( 1 << PIN_SPINDLE_PWM);
 
-        state_machine = PULSE;  
+        state_machine = PULSE;
     }
 }//end ISR TIM0_COMPA_vect
 */
