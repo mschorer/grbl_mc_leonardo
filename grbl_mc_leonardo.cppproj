@@ -75,8 +75,8 @@
       <Value>C:/dev/arduino-1.5.7/libraries/PID_v1</Value>
       <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/SPI</Value>
       <Value>C:/dev/arduino-1.5.7/libraries/TFT/src</Value>
-      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire</Value>
       <Value>C:/dev/arduino-1.5.7/libraries/TFT/src/utility</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire</Value>
       <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire/utility</Value>
       <Value>C:/dev/arduino-1.5.7/libraries</Value>
       <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries</Value>
@@ -116,8 +116,8 @@
       <Value>C:/dev/arduino-1.5.7/libraries/PID_v1</Value>
       <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/SPI</Value>
       <Value>C:/dev/arduino-1.5.7/libraries/TFT/src</Value>
-      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire</Value>
       <Value>C:/dev/arduino-1.5.7/libraries/TFT/src/utility</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire</Value>
       <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire/utility</Value>
       <Value>C:/dev/arduino-1.5.7/libraries</Value>
       <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries</Value>
@@ -329,8 +329,8 @@ object_files="C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonar
       <Value>C:/dev/arduino-1.5.7/libraries/PID_v1</Value>
       <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/SPI</Value>
       <Value>C:/dev/arduino-1.5.7/libraries/TFT/src</Value>
-      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire</Value>
       <Value>C:/dev/arduino-1.5.7/libraries/TFT/src/utility</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire</Value>
       <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire/utility</Value>
       <Value>C:/dev/arduino-1.5.7/libraries</Value>
       <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries</Value>
@@ -370,8 +370,8 @@ object_files="C:\Users\markus\AppData\Local\VMicro\Arduino\Builds\grbl_mc_leonar
       <Value>C:/dev/arduino-1.5.7/libraries/PID_v1</Value>
       <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/SPI</Value>
       <Value>C:/dev/arduino-1.5.7/libraries/TFT/src</Value>
-      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire</Value>
       <Value>C:/dev/arduino-1.5.7/libraries/TFT/src/utility</Value>
+      <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire</Value>
       <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries/Wire/utility</Value>
       <Value>C:/dev/arduino-1.5.7/libraries</Value>
       <Value>C:/dev/arduino-1.5.7/hardware/arduino/avr/libraries</Value>

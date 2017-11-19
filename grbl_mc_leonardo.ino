@@ -1120,16 +1120,18 @@ void setLaserEnable( bool on) {
 
 void setLaserValue( int val) {
 
-  if ( val > 0x3ff) val = 0x3ff;
-  if ( val < 0) val = 0;
+	if ( val > 1000) val = 1000;
+	if ( val < 0) val = 0;
 
-  if ( ! mcLaserOn) val = 0;
+	if ( ! mcLaserOn) val = 0;
 
-  mcLaserCurrent = val;
-  state->spindle.rpm_current = val;
+	mcLaserCurrent = val;
+	state->spindle.rpm_current = val;
 
-  TC4H  = ( val >> 8) & 0x03;
-  OCR4A = ( val >> 0) & 0xff;
+	val = 1000 - val;
+  
+	TC4H  = ( val >> 8) & 0x03;
+	OCR4A = ( val >> 0) & 0xff;
 }
 
 void setLaserMode( int mode) {
